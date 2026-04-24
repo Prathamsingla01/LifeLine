@@ -1,0 +1,218 @@
+/* ═══════════════════════════════════════════════════════════════
+   LifeLine — Shared Design System
+   Global navigation, typography, colors, and utilities
+   ═══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Core palette */
+  --ll-bg:          #070b11;
+  --ll-bg2:         #0c1018;
+  --ll-surface:     #111827;
+  --ll-surface2:    #1a2332;
+  --ll-surface3:    #1f2937;
+  --ll-border:      rgba(255,255,255,0.06);
+  --ll-border2:     rgba(255,255,255,0.1);
+
+  /* Accent colors */
+  --ll-red:         #ef4444;
+  --ll-red-glow:    rgba(239,68,68,0.25);
+  --ll-green:       #22c55e;
+  --ll-green-glow:  rgba(34,197,94,0.25);
+  --ll-blue:        #3b82f6;
+  --ll-blue-glow:   rgba(59,130,246,0.25);
+  --ll-amber:       #f59e0b;
+  --ll-amber-glow:  rgba(245,158,11,0.25);
+  --ll-purple:      #a855f7;
+  --ll-purple-glow: rgba(168,85,247,0.25);
+  --ll-cyan:        #06b6d4;
+
+  /* Text */
+  --ll-text:        #f1f5f9;
+  --ll-text2:       #94a3b8;
+  --ll-text3:       #64748b;
+  --ll-text4:       #334155;
+
+  /* Sizes */
+  --ll-nav-height:  64px;
+  --ll-radius:      14px;
+  --ll-radius-sm:   8px;
+  --ll-radius-lg:   20px;
+}
+
+/* ── RESETS ──────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── SHARED NAV BAR ─────────────────────────────────────────── */
+.ll-global-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--ll-nav-height);
+  background: rgba(7,11,17,0.88);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border-bottom: 1px solid var(--ll-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  z-index: 10000;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.ll-global-nav .ll-nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ll-text);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+}
+
+.ll-global-nav .ll-nav-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--ll-red), #dc2626);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 0 20px var(--ll-red-glow);
+}
+
+.ll-global-nav .ll-nav-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ll-green);
+  box-shadow: 0 0 10px var(--ll-green-glow);
+  animation: ll-nav-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ll-nav-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.7); }
+}
+
+.ll-global-nav .ll-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+}
+
+.ll-global-nav .ll-nav-link {
+  padding: 8px 14px;
+  border-radius: var(--ll-radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ll-text3);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ll-global-nav .ll-nav-link:hover {
+  color: var(--ll-text);
+  background: rgba(255,255,255,0.05);
+}
+
+.ll-global-nav .ll-nav-link.active {
+  color: var(--ll-text);
+  background: rgba(255,255,255,0.08);
+}
+
+.ll-global-nav .ll-nav-link .nav-emoji {
+  font-size: 15px;
+}
+
+/* Mobile hamburger */
+.ll-nav-hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  padding: 6px;
+  border: none;
+  background: none;
+}
+
+.ll-nav-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--ll-text2);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 900px) {
+  .ll-nav-hamburger { display: flex; }
+  .ll-global-nav .ll-nav-links {
+    position: fixed;
+    top: var(--ll-nav-height);
+    left: 0;
+    right: 0;
+    background: rgba(7,11,17,0.96);
+    backdrop-filter: blur(20px);
+    flex-direction: column;
+    padding: 16px;
+    gap: 4px;
+    border-bottom: 1px solid var(--ll-border);
+    transform: translateY(-120%);
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+  .ll-global-nav .ll-nav-links.open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: all;
+  }
+  .ll-global-nav .ll-nav-link {
+    padding: 12px 16px;
+    width: 100%;
+    font-size: 14px;
+  }
+}
+
+/* Body offset when nav is present */
+body.has-ll-nav {
+  padding-top: var(--ll-nav-height);
+}
+
+/* ── UTILITY CLASSES ────────────────────────────────────────── */
+.ll-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.ll-glow-red    { box-shadow: 0 0 30px var(--ll-red-glow), 0 0 60px rgba(239,68,68,0.1); }
+.ll-glow-green  { box-shadow: 0 0 30px var(--ll-green-glow); }
+.ll-glow-blue   { box-shadow: 0 0 30px var(--ll-blue-glow); }
+.ll-glow-amber  { box-shadow: 0 0 30px var(--ll-amber-glow); }
+.ll-glow-purple { box-shadow: 0 0 30px var(--ll-purple-glow); }
+
+/* ── SCROLLBAR ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--ll-surface3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ll-text4); }

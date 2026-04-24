@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LifeLine – Car Accident Scenario Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f0f0f;color:#f0f0f0;font-family:'DM Sans',sans-serif;min-height:100vh;padding:2rem}
+
+.ll-root{max-width:820px;margin:0 auto}
+
+.ll-header{display:flex;align-items:center;gap:14px;margin-bottom:2rem}
+.ll-logo{width:44px;height:44px;background:#1a0505;border:1px solid #ff3b3b44;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.ll-logo svg{width:24px;height:24px;fill:#ff3b3b}
+.ll-title{font-size:24px;font-weight:700;color:#fff;letter-spacing:-0.5px}
+.ll-subtitle{font-size:13px;color:#888;margin-top:2px}
+.ll-badge{margin-left:auto;background:#1a0505;border:1px solid #ff3b3b44;border-radius:6px;padding:4px 12px;font-size:11px;color:#ff3b3b;font-family:'Space Mono',monospace}
+
+/* Stage Bar */
+.ll-stage-bar{display:flex;margin-bottom:1.5rem;border:1px solid #222;border-radius:10px;overflow:hidden}
+.ll-stage{flex:1;padding:10px 4px;text-align:center;font-size:10px;font-weight:600;color:#555;background:#141414;border-right:1px solid #222;cursor:default;transition:all 0.3s}
+.ll-stage:last-child{border-right:none}
+.ll-stage.active{background:#1a0505;color:#ff3b3b}
+.ll-stage.done{background:#0a1a0a;color:#2ecc71}
+.ll-stage-num{display:block;font-size:18px;margin-bottom:3px;font-family:'Space Mono',monospace}
+
+/* Layout */
+.ll-body{display:grid;grid-template-columns:210px 1fr;gap:1rem}
+
+/* Phone */
+.ll-phone{background:#1a1a1a;border-radius:28px;border:1px solid #2a2a2a;padding:14px;min-height:400px;position:relative;overflow:hidden}
+.ll-phone-notch{width:64px;height:8px;background:#2a2a2a;border-radius:4px;margin:0 auto 14px}
+.ll-phone-screen{min-height:340px;display:flex;flex-direction:column}
+
+.ll-screen{display:none;flex-direction:column;height:100%}
+.ll-screen.visible{display:flex}
+
+.ll-screen-tag{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#555;margin-bottom:10px;font-family:'Space Mono',monospace}
+
+/* Map screen */
+.ll-map-bg{background:#111;border:1px solid #222;border-radius:10px;flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;margin-bottom:10px;min-height:160px}
+.ll-map-grid line{stroke:#1f1f1f}
+.ll-map-pin{font-size:22px;position:relative;z-index:2}
+.ll-sos-btn{background:#1a0505;border:1px solid #ff3b3b44;border-radius:50%;width:68px;height:68px;margin:0 auto;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#ff3b3b;font-size:12px;font-weight:700;font-family:'Space Mono',monospace;letter-spacing:1px}
+.ll-map-status{text-align:center;margin-top:8px;font-size:9px;color:#444;font-family:'Space Mono',monospace}
+
+/* Impact screen */
+.ll-alert-box{background:#1a0505;border:1px solid #ff3b3b44;border-radius:10px;padding:12px;margin-bottom:10px}
+.ll-alert-title{font-size:12px;font-weight:700;color:#ff3b3b;margin-bottom:4px}
+.ll-alert-sub{font-size:10px;color:#ff6b6b}
+.ll-sensor{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.ll-sensor-item{background:#111;border:1px solid #222;border-radius:8px;padding:9px}
+.ll-sensor-label{font-size:9px;color:#555;margin-bottom:4px;font-family:'Space Mono',monospace}
+.ll-sensor-val{font-size:16px;font-weight:700;color:#f0f0f0;font-family:'Space Mono',monospace}
+.ll-sensor-val.danger{color:#ff3b3b}
+
+/* Timer screen */
+.ll-timer-ring{width:90px;height:90px;margin:12px auto;position:relative;display:flex;align-items:center;justify-content:center}
+.ll-timer-svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.ll-timer-track{fill:none;stroke:#222;stroke-width:5}
+.ll-timer-fill{fill:none;stroke:#ff3b3b;stroke-width:5;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+.ll-timer-num{font-size:26px;font-weight:700;color:#ff3b3b;font-family:'Space Mono',monospace;position:relative;z-index:1}
+.ll-timer-hint{text-align:center;font-size:9px;color:#555;margin-bottom:12px}
+.ll-ok-btn{background:#0a1a0a;border:1px solid #2ecc7144;border-radius:8px;padding:9px;width:100%;color:#2ecc71;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:6px;font-family:'DM Sans',sans-serif}
+.ll-ok-btn:hover{background:#0d200d}
+.ll-nope-btn{background:#1a0505;border:1px solid #ff3b3b44;border-radius:8px;padding:7px;width:100%;color:#ff3b3b;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.ll-nope-btn:hover{background:#1f0707}
+
+/* SOS screen */
+.ll-sos-status{background:#1a0505;border:1px solid #ff3b3b44;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center}
+.ll-sos-title{font-size:13px;font-weight:700;color:#ff3b3b;margin-bottom:3px;font-family:'Space Mono',monospace;letter-spacing:2px}
+.ll-sos-sub{font-size:9px;color:#ff6b6b}
+.ll-profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ll-profile-item{background:#111;border:1px solid #222;border-radius:7px;padding:8px}
+.ll-profile-key{font-size:8px;color:#555;margin-bottom:3px;font-family:'Space Mono',monospace}
+.ll-profile-val{font-size:11px;font-weight:600;color:#f0f0f0}
+.ll-profile-val.danger{color:#ff3b3b}
+.ll-profile-note{font-size:8px;color:#444;margin-top:8px;text-align:center}
+
+/* Notif screen */
+.ll-notif{display:flex;gap:9px;align-items:flex-start;padding:8px;background:#111;border:1px solid #222;border-radius:8px;margin-bottom:7px}
+.ll-notif-icon{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px}
+.ll-notif-text{font-size:9px;color:#aaa;line-height:1.5}
+.ll-notif-bold{font-weight:700;color:#f0f0f0;display:block;margin-bottom:1px}
+
+/* Dispatch screen */
+.ll-dispatch-badge{background:#0a1a0a;border:1px solid #2ecc7144;border-radius:8px;padding:10px;text-align:center;margin-bottom:8px}
+.ll-dispatch-title{font-size:12px;font-weight:700;color:#2ecc71;font-family:'Space Mono',monospace;letter-spacing:1px}
+.ll-dispatch-eta{font-size:9px;color:#2ecc71;margin-top:3px}
+
+/* Panel */
+.ll-panel{display:flex;flex-direction:column;gap:10px}
+.ll-card{background:#141414;border:1px solid #222;border-radius:14px;padding:16px}
+.ll-card-title{font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;font-family:'Space Mono',monospace}
+
+/* Log */
+.ll-log{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:8px;padding:12px;font-family:'Space Mono',monospace;font-size:10px;min-height:120px;line-height:1.9;max-height:200px;overflow-y:auto}
+.ll-log-line{color:#555;display:flex;gap:10px}
+.ll-log-line.ok{color:#2ecc71}
+.ll-log-line.warn{color:#f39c12}
+.ll-log-line.err{color:#ff3b3b}
+.ll-log-line.info{color:#3498db}
+.ll-log-ts{opacity:0.5;flex-shrink:0}
+
+/* Recipients */
+.ll-recipients{display:flex;flex-direction:column;gap:7px}
+.ll-recipient{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;border:1px solid #222;background:#0d0d0d}
+.ll-rec-left{display:flex;align-items:center;gap:10px}
+.ll-rec-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.ll-rec-name{font-size:12px;font-weight:600;color:#f0f0f0}
+.ll-rec-role{font-size:9px;color:#555;font-family:'Space Mono',monospace}
+.ll-rec-status{font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;font-family:'Space Mono',monospace}
+.ll-rec-status.sent{background:#0a1a0a;color:#2ecc71;border:1px solid #2ecc7133}
+.ll-rec-status.pending{background:#111;color:#444;border:1px solid #222}
+.ll-rec-status.ack{background:#0a1020;color:#3498db;border:1px solid #3498db33}
+
+/* Controls */
+.ll-controls{display:flex;gap:10px;margin-top:1.2rem;align-items:center}
+.ll-btn-back{background:#141414;border:1px solid #2a2a2a;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:500;color:#888;cursor:pointer;font-family:'DM Sans',sans-serif}
+.ll-btn-back:hover{background:#1a1a1a;color:#aaa}
+.ll-btn-back:disabled{opacity:0.3;cursor:not-allowed}
+.ll-btn-next{background:#1a0505;border:1px solid #ff3b3b44;border-radius:10px;padding:11px 22px;font-size:13px;font-weight:700;color:#ff3b3b;cursor:pointer;font-family:'DM Sans',sans-serif;flex:1;transition:all 0.2s}
+.ll-btn-next:hover{background:#220606}
+.ll-btn-next:disabled{opacity:0.3;cursor:not-allowed}
+.ll-step-info{font-size:11px;color:#444;flex-shrink:0;font-family:'Space Mono',monospace}
+
+.ll-pulse{animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+</style>
+</head>
+<body>
+<div class="ll-root">
+
+  <div class="ll-header">
+    <div class="ll-logo">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2zm-1 13H9v-2h2v2zm0-4H9V7h2v4zm4 4h-2v-2h2v2zm0-4h-2V7h2v4z"/>
+      </svg>
+    </div>
+    <div>
+      <div class="ll-title">LifeLine</div>
+      <div class="ll-subtitle">Car Accident — Interactive Scenario Demo</div>
+    </div>
+    <div class="ll-badge">HACKATHON BUILD</div>
+  </div>
+
+  <!-- Stage Bar -->
+  <div class="ll-stage-bar" id="stageBar">
+    <div class="ll-stage active" id="s0"><span class="ll-stage-num">01</span>Normal</div>
+    <div class="ll-stage" id="s1"><span class="ll-stage-num">02</span>Impact</div>
+    <div class="ll-stage" id="s2"><span class="ll-stage-num">03</span>Timer</div>
+    <div class="ll-stage" id="s3"><span class="ll-stage-num">04</span>SOS</div>
+    <div class="ll-stage" id="s4"><span class="ll-stage-num">05</span>Notified</div>
+    <div class="ll-stage" id="s5"><span class="ll-stage-num">06</span>Dispatched</div>
+  </div>
+
+  <div class="ll-body">
+    <!-- Phone mockup -->
+    <div class="ll-phone">
+      <div class="ll-phone-notch"></div>
+      <div class="ll-phone-screen">
+
+        <!-- Screen 0: Normal -->
+        <div class="ll-screen visible" id="sc0">
+          <div class="ll-screen-tag">Home · Active Monitoring</div>
+          <div class="ll-map-bg">
+            <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:0.25" viewBox="0 0 176 180" preserveAspectRatio="none">
+              <line x1="0" y1="45" x2="176" y2="45" stroke="#333" stroke-width="0.5"/>
+              <line x1="0" y1="90" x2="176" y2="90" stroke="#333" stroke-width="0.5"/>
+              <line x1="0" y1="135" x2="176" y2="135" stroke="#333" stroke-width="0.5"/>
+              <line x1="44" y1="0" x2="44" y2="180" stroke="#333" stroke-width="0.5"/>
+              <line x1="88" y1="0" x2="88" y2="180" stroke="#333" stroke-width="0.5"/>
+              <line x1="132" y1="0" x2="132" y2="180" stroke="#333" stroke-width="0.5"/>
+            </svg>
+            <div class="ll-map-pin">📍</div>
+          </div>
+          <div class="ll-sos-btn">SOS</div>
+          <div class="ll-map-status">Sensors: Active &nbsp;·&nbsp; GPS: On</div>
+        </div>
+
+        <!-- Screen 1: Impact -->
+        <div class="ll-screen" id="sc1">
+          <div class="ll-screen-tag">⚠ Impact Detected</div>
+          <div class="ll-alert-box">
+            <div class="ll-alert-title">Sudden Impact Detected</div>
+            <div class="ll-alert-sub">Acceleration: <strong>4.2g</strong> &nbsp;·&nbsp; Threshold: 3.0g</div>
+          </div>
+          <div class="ll-sensor">
+            <div class="ll-sensor-item"><div class="ll-sensor-label">ACCEL</div><div class="ll-sensor-val danger">4.2g</div></div>
+            <div class="ll-sensor-item"><div class="ll-sensor-label">GYRO</div><div class="ll-sensor-val danger">312°/s</div></div>
+            <div class="ll-sensor-item"><div class="ll-sensor-label">SPEED Δ</div><div class="ll-sensor-val danger">−67 km/h</div></div>
+            <div class="ll-sensor-item"><div class="ll-sensor-label">STATUS</div><div class="ll-sensor-val danger">CRASH</div></div>
+          </div>
+          <div style="font-size:9px;color:#444;font-family:'Space Mono',monospace;margin-top:4px">Safety timer starting in 1s...</div>
+        </div>
+
+        <!-- Screen 2: Timer -->
+        <div class="ll-screen" id="sc2">
+          <div class="ll-screen-tag">Safety Timer · Are you OK?</div>
+          <div class="ll-timer-ring">
+            <svg class="ll-timer-svg" viewBox="0 0 90 90">
+              <circle class="ll-timer-track" cx="45" cy="45" r="38"/>
+              <circle class="ll-timer-fill" cx="45" cy="45" r="38" id="timerCircle" stroke-dasharray="238.76" stroke-dashoffset="0"/>
+            </svg>
+            <span class="ll-timer-num" id="timerNum">10</span>
+          </div>
+          <div class="ll-timer-hint">No response → SOS auto-sends</div>
+          <button class="ll-ok-btn" onclick="goToStep('safe')">✓ I'm OK — Cancel SOS</button>
+          <button class="ll-nope-btn" onclick="goToStep(3)">Send SOS Now</button>
+        </div>
+
+        <!-- Screen 3: SOS -->
+        <div class="ll-screen" id="sc3">
+          <div class="ll-screen-tag">SOS Triggered</div>
+          <div class="ll-sos-status ll-pulse">
+            <div class="ll-sos-title">⚡ SOS ACTIVE</div>
+            <div class="ll-sos-sub">Alerting emergency contacts...</div>
+          </div>
+          <div class="ll-profile-grid">
+            <div class="ll-profile-item"><div class="ll-profile-key">BLOOD TYPE</div><div class="ll-profile-val danger">O−</div></div>
+            <div class="ll-profile-item"><div class="ll-profile-key">ALLERGIES</div><div class="ll-profile-val danger">Penicillin</div></div>
+            <div class="ll-profile-item"><div class="ll-profile-key">LOCATION</div><div class="ll-profile-val" style="font-size:9px">28.61°N 77.20°E</div></div>
+            <div class="ll-profile-item"><div class="ll-profile-key">INCIDENT</div><div class="ll-profile-val">Accident</div></div>
+          </div>
+          <div class="ll-profile-note">Medical data shared with responders</div>
+        </div>
+
+        <!-- Screen 4: Notified -->
+        <div class="ll-screen" id="sc4">
+          <div class="ll-screen-tag">Notifications Sent</div>
+          <div class="ll-notif">
+            <div class="ll-notif-icon" style="background:#1a0505">📲</div>
+            <div class="ll-notif-text"><span class="ll-notif-bold">FCM Push → Family</span>Priya &amp; Rahul notified with live location</div>
+          </div>
+          <div class="ll-notif">
+            <div class="ll-notif-icon" style="background:#1a1000">💬</div>
+            <div class="ll-notif-text"><span class="ll-notif-bold">Twilio SMS → AIIMS Hospital</span>Ambulance on standby · dispatching</div>
+          </div>
+          <div class="ll-notif">
+            <div class="ll-notif-icon" style="background:#001020">🖥</div>
+            <div class="ll-notif-text"><span class="ll-notif-bold">WebSocket → Dashboard</span>Incident #4821 pushed to dispatch</div>
+          </div>
+        </div>
+
+        <!-- Screen 5: Dispatched -->
+        <div class="ll-screen" id="sc5">
+          <div class="ll-screen-tag">Ambulance Dispatched</div>
+          <div class="ll-dispatch-badge">
+            <div class="ll-dispatch-title">🚑 AMBULANCE EN ROUTE</div>
+            <div class="ll-dispatch-eta">ETA: ~8 min · AIIMS Trauma Centre</div>
+          </div>
+          <div class="ll-notif">
+            <div class="ll-notif-icon" style="background:#0a1a0a">👨‍👩‍👧</div>
+            <div class="ll-notif-text"><span class="ll-notif-bold">Family acknowledged</span>Priya: "On my way, stay safe" ❤</div>
+          </div>
+          <div style="font-size:9px;color:#444;font-family:'Space Mono',monospace;margin-top:10px">Live tracking active for all parties</div>
+        </div>
+
+        <!-- Screen safe -->
+        <div class="ll-screen" id="sc_safe">
+          <div style="text-align:center;padding:30px 10px">
+            <div style="font-size:44px;margin-bottom:12px">✅</div>
+            <div style="font-size:14px;font-weight:700;color:#2ecc71;margin-bottom:6px">SOS Cancelled</div>
+            <div style="font-size:10px;color:#555">User confirmed safe.<br/>Monitoring resumed normally.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="ll-panel">
+
+      <div class="ll-card">
+        <div class="ll-card-title">System Log</div>
+        <div class="ll-log" id="sysLog">
+          <div class="ll-log-line ok"><span class="ll-log-ts">00:00</span><span>system boot · sensors online</span></div>
+          <div class="ll-log-line ok"><span class="ll-log-ts">00:01</span><span>GPS lock · lat 28.61 lon 77.20</span></div>
+          <div class="ll-log-line ok"><span class="ll-log-ts">00:02</span><span>accel baseline: 0.98g (normal)</span></div>
+        </div>
+      </div>
+
+      <div class="ll-card" id="recipientsCard" style="display:none">
+        <div class="ll-card-title">Alert Recipients</div>
+        <div class="ll-recipients">
+          <div class="ll-recipient">
+            <div class="ll-rec-left">
+              <div class="ll-rec-avatar" style="background:#001a3a;color:#3498db">P</div>
+              <div><div class="ll-rec-name">Priya (Mom)</div><div class="ll-rec-role">family · FCM push</div></div>
+            </div>
+            <div class="ll-rec-status pending" id="rs0">pending</div>
+          </div>
+          <div class="ll-recipient">
+            <div class="ll-rec-left">
+              <div class="ll-rec-avatar" style="background:#0a1a0a;color:#2ecc71">R</div>
+              <div><div class="ll-rec-name">Rahul (Dad)</div><div class="ll-rec-role">family · FCM push</div></div>
+            </div>
+            <div class="ll-rec-status pending" id="rs1">pending</div>
+          </div>
+          <div class="ll-recipient">
+            <div class="ll-rec-left">
+              <div class="ll-rec-avatar" style="background:#1a0505;color:#ff3b3b">H</div>
+              <div><div class="ll-rec-name">AIIMS Hospital</div><div class="ll-rec-role">responder · Twilio SMS</div></div>
+            </div>
+            <div class="ll-rec-status pending" id="rs2">pending</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="ll-controls">
+    <button class="ll-btn-back" id="backBtn" onclick="prev()" disabled>← Back</button>
+    <div class="ll-step-info" id="stepInfo">Step 1 / 6</div>
+    <button class="ll-btn-next" id="nextBtn" onclick="next()">Simulate Crash →</button>
+  </div>
+
+</div>
+
+<script>
+let step = 0;
+let timerInterval = null;
+let timerCount = 10;
+const totalSteps = 6;
+const circumference = 238.76;
+
+const screens = ['sc0','sc1','sc2','sc3','sc4','sc5'];
+const stages  = ['s0','s1','s2','s3','s4','s5'];
+
+const btnLabels = [
+  'Simulate Crash →',
+  'Start Safety Timer →',
+  'Timer Expired — Auto SOS →',
+  'Sending Alerts →',
+  'View Dispatch →',
+  'Scenario Complete ✓'
+];
+
+const logs = [
+  [],
+  [
+    {t:'00:04', msg:'IMPACT DETECTED · accel 4.2g > 3.0g threshold', cls:'err'},
+    {t:'00:04', msg:'gyroscope spike: 312 deg/s', cls:'warn'},
+    {t:'00:04', msg:'velocity drop detected: -67 km/h', cls:'warn'},
+    {t:'00:04', msg:'crash classification: COLLISION · starting safety timer', cls:'warn'},
+  ],
+  [
+    {t:'00:05', msg:'safety timer started · 10s countdown', cls:'warn'},
+    {t:'00:05', msg:'awaiting user response...', cls:'warn'},
+  ],
+  [
+    {t:'00:15', msg:'no response received · auto-SOS triggered', cls:'err'},
+    {t:'00:15', msg:'POST /api/emergencies · type=Accident', cls:'info'},
+    {t:'00:15', msg:'medical profile attached to payload', cls:'info'},
+    {t:'00:15', msg:'DB: incident #4821 saved · status=Active', cls:'ok'},
+  ],
+  [
+    {t:'00:16', msg:'FCM push → Priya Kumar · delivered ✓', cls:'ok'},
+    {t:'00:16', msg:'FCM push → Rahul Kumar · delivered ✓', cls:'ok'},
+    {t:'00:16', msg:'Twilio SMS → AIIMS +91-11-2658xxxx · sent', cls:'ok'},
+    {t:'00:16', msg:'WebSocket /ws/incidents · dashboard updated', cls:'ok'},
+  ],
+  [
+    {t:'00:20', msg:'hospital accepted · incident #4821', cls:'ok'},
+    {t:'00:20', msg:'ambulance dispatched · ETA 8 minutes', cls:'ok'},
+    {t:'00:21', msg:'family acknowledged via FCM reply', cls:'ok'},
+    {t:'00:21', msg:'live GPS tracking active for responders', cls:'ok'},
+    {t:'00:21', msg:'incident status → Responding', cls:'ok'},
+  ],
+];
+
+const logEl   = document.getElementById('sysLog');
+const nextBtn = document.getElementById('nextBtn');
+const backBtn = document.getElementById('backBtn');
+const stepInfo= document.getElementById('stepInfo');
+
+function addLogs(entries){
+  entries.forEach(e => {
+    const d = document.createElement('div');
+    d.className = 'll-log-line ' + e.cls;
+    d.innerHTML = `<span class="ll-log-ts">${e.t}</span><span>${e.msg}</span>`;
+    logEl.appendChild(d);
+    logEl.scrollTop = logEl.scrollHeight;
+  });
+}
+
+function showScreen(id){
+  screens.forEach(s => document.getElementById(s).classList.remove('visible'));
+  const el = document.getElementById(id);
+  if(el) el.classList.add('visible');
+}
+
+function updateStages(){
+  stages.forEach((s,i) => {
+    const el = document.getElementById(s);
+    el.className = 'll-stage';
+    if(i < step) el.classList.add('done');
+    else if(i === step) el.classList.add('active');
+  });
+}
+
+function startTimer(){
+  timerCount = 10;
+  clearInterval(timerInterval);
+  const circle = document.getElementById('timerCircle');
+  const numEl  = document.getElementById('timerNum');
+  timerInterval = setInterval(() => {
+    timerCount--;
+    numEl.textContent = timerCount;
+    circle.style.strokeDashoffset = ((10 - timerCount) / 10) * circumference;
+    if(timerCount <= 0){
+      clearInterval(timerInterval);
+      goToStep(3);
+    }
+  }, 1000);
+}
+
+function goToStep(s){
+  clearInterval(timerInterval);
+  if(s === 'safe'){
+    showScreen('sc_safe');
+    stages.forEach(st => document.getElementById(st).className = 'll-stage');
+    nextBtn.disabled = true;
+    nextBtn.textContent = 'Scenario ended safely ✓';
+    backBtn.disabled = false;
+    return;
+  }
+  step = s;
+  renderStep();
+}
+
+function renderStep(){
+  updateStages();
+  showScreen(screens[Math.min(step, screens.length - 1)]);
+  if(step < logs.length && logs[step].length) addLogs(logs[step]);
+  nextBtn.textContent = btnLabels[step] || 'Next →';
+  nextBtn.disabled    = step >= totalSteps - 1;
+  backBtn.disabled    = step === 0;
+  stepInfo.textContent= `Step ${step + 1} / ${totalSteps}`;
+
+  if(step >= 3){
+    document.getElementById('recipientsCard').style.display = 'block';
+  }
+  if(step === 4){
+    setTimeout(() => setStatus('rs0','sent'), 400);
+    setTimeout(() => setStatus('rs1','sent'), 800);
+    setTimeout(() => setStatus('rs2','sent'), 1200);
+  }
+  if(step === 5){
+    setTimeout(() => setStatus('rs0','ack'), 600);
+    setTimeout(() => setStatus('rs1','ack'), 1000);
+  }
+  if(step === 2){ startTimer(); }
+}
+
+function setStatus(id, cls){
+  const el = document.getElementById(id);
+  el.textContent = cls;
+  el.className   = 'll-rec-status ' + cls;
+}
+
+function next(){
+  if(step >= totalSteps - 1) return;
+  step++;
+  renderStep();
+}
+
+function prev(){
+  clearInterval(timerInterval);
+  if(step <= 0) return;
+  step--;
+  if(step === 0){
+    logEl.innerHTML = `
+      <div class="ll-log-line ok"><span class="ll-log-ts">00:00</span><span>system boot · sensors online</span></div>
+      <div class="ll-log-line ok"><span class="ll-log-ts">00:01</span><span>GPS lock · lat 28.61 lon 77.20</span></div>
+      <div class="ll-log-line ok"><span class="ll-log-ts">00:02</span><span>accel baseline: 0.98g (normal)</span></div>
+    `;
+    document.getElementById('recipientsCard').style.display = 'none';
+    ['rs0','rs1','rs2'].forEach(id => setStatus(id,'pending'));
+  }
+  renderStep();
+}
+
+renderStep();
+</script>
+<script src="nav-component.js"></script>
+</body>
+</html>

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LifeLine — Family Tracker</title>
+<meta name="description" content="LifeLine Family Tracker: Real-time family member locations, safety status, and instant SOS alerts."/>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--ll-bg);
+    color: var(--ll-text);
+    min-height: 100vh;
+  }
+
+  .tracker-page { max-width: 1000px; margin: 0 auto; padding: 32px 24px 60px; }
+
+  .tracker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .tracker-header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .family-code {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--ll-surface);
+    border: 1px solid var(--ll-border);
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--ll-blue);
+  }
+
+  .family-code .fc-label {
+    font-size: 10px;
+    color: var(--ll-text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+
+  /* ── MAP ─────────────────────────────────────────────────── */
+  .map-container {
+    background: var(--ll-surface);
+    border: 1px solid var(--ll-border);
+    border-radius: 20px;
+    height: 380px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .map-grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .map-roads svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Map pins */
+  .map-pin {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    z-index: 2;
+  }
+  .map-pin:hover { transform: scale(1.15); }
+
+  .pin-dot {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    border: 3px solid;
+    position: relative;
+  }
+
+  .pin-dot::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid;
+    opacity: 0.3;
+    animation: ll-nav-pulse 2s ease-in-out infinite;
+  }
+
+  .pin-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  .map-legend-float {
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
+    background: rgba(7,11,17,0.88);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--ll-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 11px;
+    color: var(--ll-text3);
+    z-index: 3;
+  }
+
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+  }
+
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── MEMBER CARDS ─────────────────────────────────────────── */
+  .members-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .member-card {
+    background: var(--ll-surface);
+    border: 1px solid var(--ll-border);
+    border-radius: 16px;
+    padding: 20px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  .member-card:hover {
+    border-color: var(--ll-border2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+
+  .member-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .member-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .member-name {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  .member-role {
+    font-size: 11px;
+    color: var(--ll-text3);
+  }
+
+  .member-status-badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 100px;
+    letter-spacing: 0.3px;
+  }
+
+  .msb-safe { background: rgba(34,197,94,0.1); color: var(--ll-green); border: 1px solid rgba(34,197,94,0.25); }
+  .msb-moving { background: rgba(59,130,246,0.1); color: var(--ll-blue); border: 1px solid rgba(59,130,246,0.25); }
+  .msb-alert { background: rgba(239,68,68,0.1); color: var(--ll-red); border: 1px solid rgba(239,68,68,0.25); animation: ll-nav-pulse 1.5s ease-in-out infinite; }
+
+  .member-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .md-item {
+    background: var(--ll-bg);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .md-label {
+    font-size: 9px;
+    color: var(--ll-text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 3px;
+    font-weight: 600;
+  }
+
+  .md-value {
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* ── ACTIVITY FEED ────────────────────────────────────────── */
+  .activity-section {
+    background: var(--ll-surface);
+    border: 1px solid var(--ll-border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .activity-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ll-text3);
+    margin-bottom: 16px;
+  }
+
+  .activity-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--ll-border);
+    opacity: 0;
+    transform: translateX(-12px);
+    transition: all 0.4s ease;
+  }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-item.visible { opacity: 1; transform: translateX(0); }
+
+  .activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .activity-text {
+    flex: 1;
+    font-size: 13px;
+    color: var(--ll-text2);
+    line-height: 1.5;
+  }
+  .activity-text strong { color: var(--ll-text); }
+
+  .activity-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ll-text4);
+    white-space: nowrap;
+  }
+
+  /* ── SOS SECTION ──────────────────────────────────────────── */
+  .sos-section {
+    background: linear-gradient(135deg, rgba(239,68,68,0.05), rgba(239,68,68,0.02));
+    border: 1px solid rgba(239,68,68,0.15);
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+  }
+
+  .sos-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--ll-red);
+  }
+
+  .sos-desc {
+    font-size: 13px;
+    color: var(--ll-text2);
+    margin-bottom: 20px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .sos-btn-family {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--ll-red), #dc2626);
+    border: 4px solid rgba(239,68,68,0.3);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 900;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 0 12px rgba(239,68,68,0.08), 0 0 0 24px rgba(239,68,68,0.04);
+    position: relative;
+  }
+  .sos-btn-family:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 14px rgba(239,68,68,0.12), 0 0 0 28px rgba(239,68,68,0.06);
+  }
+  .sos-btn-family:active { transform: scale(0.95); }
+
+  .sos-hint {
+    font-size: 11px;
+    color: var(--ll-text3);
+    margin-top: 16px;
+  }
+
+  #sosFamilyStatus {
+    margin-top: 12px;
+    font-size: 13px;
+    min-height: 20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="tracker-page">
+
+  <div class="tracker-header">
+    <h1>👨‍👩‍👧‍👦 Family Tracker</h1>
+    <div class="family-code">
+      <span class="fc-label">Group</span>
+      KMFG-7291
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-container">
+    <div class="map-grid-bg"></div>
+    <div class="map-roads">
+      <svg viewBox="0 0 1000 380" preserveAspectRatio="none">
+        <line x1="0" y1="190" x2="1000" y2="190" stroke="rgba(255,255,255,0.04)" stroke-width="8"/>
+        <line x1="500" y1="0" x2="500" y2="380" stroke="rgba(255,255,255,0.04)" stroke-width="8"/>
+        <line x1="250" y1="0" x2="250" y2="380" stroke="rgba(255,255,255,0.03)" stroke-width="4"/>
+        <line x1="750" y1="0" x2="750" y2="380" stroke="rgba(255,255,255,0.03)" stroke-width="4"/>
+        <line x1="0" y1="95" x2="1000" y2="95" stroke="rgba(255,255,255,0.03)" stroke-width="4"/>
+        <line x1="0" y1="285" x2="1000" y2="285" stroke="rgba(255,255,255,0.03)" stroke-width="4"/>
+      </svg>
+    </div>
+
+    <!-- Arjun -->
+    <div class="map-pin" style="left:35%;top:42%;transform:translate(-50%,-50%)" id="pin-arjun">
+      <div class="pin-dot" style="background:rgba(59,130,246,0.15);border-color:var(--ll-blue);color:var(--ll-blue)">
+        👨
+      </div>
+      <span class="pin-label" style="background:rgba(59,130,246,0.15);color:var(--ll-blue)">Arjun</span>
+    </div>
+
+    <!-- Priya -->
+    <div class="map-pin" style="left:58%;top:28%;transform:translate(-50%,-50%)" id="pin-priya">
+      <div class="pin-dot" style="background:rgba(168,85,247,0.15);border-color:var(--ll-purple);color:var(--ll-purple)">
+        👩
+      </div>
+      <span class="pin-label" style="background:rgba(168,85,247,0.15);color:var(--ll-purple)">Priya</span>
+    </div>
+
+    <!-- Ananya -->
+    <div class="map-pin" style="left:72%;top:55%;transform:translate(-50%,-50%)" id="pin-ananya">
+      <div class="pin-dot" style="background:rgba(34,197,94,0.15);border-color:var(--ll-green);color:var(--ll-green)">
+        👧
+      </div>
+      <span class="pin-label" style="background:rgba(34,197,94,0.15);color:var(--ll-green)">Ananya</span>
+    </div>
+
+    <!-- Grandpa -->
+    <div class="map-pin" style="left:22%;top:72%;transform:translate(-50%,-50%)" id="pin-grandpa">
+      <div class="pin-dot" style="background:rgba(245,158,11,0.15);border-color:var(--ll-amber);color:var(--ll-amber)">
+        👴
+      </div>
+      <span class="pin-label" style="background:rgba(245,158,11,0.15);color:var(--ll-amber)">Dadu</span>
+    </div>
+
+    <div class="map-legend-float">
+      <div class="legend-row"><div class="legend-dot" style="background:var(--ll-blue)"></div>Arjun — You</div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--ll-purple)"></div>Priya — Wife</div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--ll-green)"></div>Ananya — Daughter</div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--ll-amber)"></div>Dadu — Grandfather</div>
+    </div>
+  </div>
+
+  <!-- MEMBER CARDS -->
+  <div class="members-grid">
+
+    <div class="member-card" onclick="focusPin('pin-arjun')">
+      <div class="member-top">
+        <div class="member-avatar" style="background:rgba(59,130,246,0.12);color:var(--ll-blue)">AM</div>
+        <div>
+          <div class="member-name">Arjun Mehta</div>
+          <div class="member-role">You · Family Admin</div>
+        </div>
+        <span class="member-status-badge msb-safe">● Safe</span>
+      </div>
+      <div class="member-details">
+        <div class="md-item"><div class="md-label">Location</div><div class="md-value">Connaught Place</div></div>
+        <div class="md-item"><div class="md-label">Updated</div><div class="md-value" style="color:var(--ll-green)">Just now</div></div>
+        <div class="md-item"><div class="md-label">Battery</div><div class="md-value">78%</div></div>
+        <div class="md-item"><div class="md-label">Speed</div><div class="md-value">0 km/h</div></div>
+      </div>
+    </div>
+
+    <div class="member-card" onclick="focusPin('pin-priya')">
+      <div class="member-top">
+        <div class="member-avatar" style="background:rgba(168,85,247,0.12);color:var(--ll-purple)">PM</div>
+        <div>
+          <div class="member-name">Priya Mehta</div>
+          <div class="member-role">Wife</div>
+        </div>
+        <span class="member-status-badge msb-moving">● Moving</span>
+      </div>
+      <div class="member-details">
+        <div class="md-item"><div class="md-label">Location</div><div class="md-value">Karol Bagh</div></div>
+        <div class="md-item"><div class="md-label">Updated</div><div class="md-value">2 min ago</div></div>
+        <div class="md-item"><div class="md-label">Battery</div><div class="md-value">62%</div></div>
+        <div class="md-item"><div class="md-label">Speed</div><div class="md-value" style="color:var(--ll-blue)">34 km/h</div></div>
+      </div>
+    </div>
+
+    <div class="member-card" onclick="focusPin('pin-ananya')">
+      <div class="member-top">
+        <div class="member-avatar" style="background:rgba(34,197,94,0.12);color:var(--ll-green)">AN</div>
+        <div>
+          <div class="member-name">Ananya Mehta</div>
+          <div class="member-role">Daughter · Child Mode</div>
+        </div>
+        <span class="member-status-badge msb-safe">● Safe</span>
+      </div>
+      <div class="member-details">
+        <div class="md-item"><div class="md-label">Location</div><div class="md-value">DPS School</div></div>
+        <div class="md-item"><div class="md-label">Updated</div><div class="md-value">5 min ago</div></div>
+        <div class="md-item"><div class="md-label">Battery</div><div class="md-value" style="color:var(--ll-amber)">31%</div></div>
+        <div class="md-item"><div class="md-label">Geofence</div><div class="md-value" style="color:var(--ll-green)">Inside ✓</div></div>
+      </div>
+    </div>
+
+    <div class="member-card" onclick="focusPin('pin-grandpa')">
+      <div class="member-top">
+        <div class="member-avatar" style="background:rgba(245,158,11,0.12);color:var(--ll-amber)">RM</div>
+        <div>
+          <div class="member-name">Ramesh Mehta</div>
+          <div class="member-role">Grandfather · Elder Mode</div>
+        </div>
+        <span class="member-status-badge msb-safe">● Safe</span>
+      </div>
+      <div class="member-details">
+        <div class="md-item"><div class="md-label">Location</div><div class="md-value">Lodhi Gardens</div></div>
+        <div class="md-item"><div class="md-label">Updated</div><div class="md-value">8 min ago</div></div>
+        <div class="md-item"><div class="md-label">Battery</div><div class="md-value">55%</div></div>
+        <div class="md-item"><div class="md-label">Steps Today</div><div class="md-value">3,241</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVITY FEED -->
+  <div class="activity-section">
+    <div class="activity-title">Recent Activity Feed</div>
+
+    <div class="activity-item visible">
+      <div class="activity-icon" style="background:rgba(34,197,94,0.1)">✅</div>
+      <div class="activity-text"><strong>Ananya</strong> arrived at <strong>DPS School</strong> (geofence entered)</div>
+      <div class="activity-time">08:15 AM</div>
+    </div>
+
+    <div class="activity-item visible">
+      <div class="activity-icon" style="background:rgba(59,130,246,0.1)">🚗</div>
+      <div class="activity-text"><strong>Priya</strong> started a trip from <strong>Home → Karol Bagh</strong></div>
+      <div class="activity-time">09:42 AM</div>
+    </div>
+
+    <div class="activity-item visible">
+      <div class="activity-icon" style="background:rgba(245,158,11,0.1)">🚶</div>
+      <div class="activity-text"><strong>Dadu</strong> began morning walk at <strong>Lodhi Gardens</strong> — 3,241 steps</div>
+      <div class="activity-time">06:30 AM</div>
+    </div>
+
+    <div class="activity-item visible">
+      <div class="activity-icon" style="background:rgba(239,68,68,0.1)">🔋</div>
+      <div class="activity-text"><strong>Ananya's</strong> phone battery below 35% — low battery alert</div>
+      <div class="activity-time">10:05 AM</div>
+    </div>
+
+    <div class="activity-item visible">
+      <div class="activity-icon" style="background:rgba(168,85,247,0.1)">📱</div>
+      <div class="activity-text"><strong>Priya</strong> acknowledged <strong>Arjun's</strong> safety check-in</div>
+      <div class="activity-time">Yesterday</div>
+    </div>
+
+    <div class="activity-item visible">
+      <div class="activity-icon" style="background:rgba(34,197,94,0.1)">🏠</div>
+      <div class="activity-text">All family members were <strong>home safe</strong> by 9:30 PM</div>
+      <div class="activity-time">Yesterday</div>
+    </div>
+  </div>
+
+  <!-- FAMILY SOS -->
+  <div class="sos-section">
+    <div class="sos-title">🚨 Family SOS</div>
+    <div class="sos-desc">Instantly alert all family members with your live location. Press to send emergency notification to everyone.</div>
+    <button class="sos-btn-family" id="sosFamilyBtn" onclick="triggerFamilySOS()">SOS</button>
+    <div id="sosFamilyStatus" class="sos-hint">Tap to send alert to all 3 family members</div>
+  </div>
+</div>
+
+<script src="nav-component.js"></script>
+<script>
+  // Animate map pins floating
+  function animatePins() {
+    const pins = document.querySelectorAll('.map-pin');
+    pins.forEach((pin, i) => {
+      const baseTop = parseFloat(pin.style.top);
+      const baseLeft = parseFloat(pin.style.left);
+      let t = i * 1000;
+      setInterval(() => {
+        t += 50;
+        const dy = Math.sin(t / 1500) * 0.5;
+        const dx = Math.cos(t / 2000) * 0.3;
+        pin.style.top = (baseTop + dy) + '%';
+        pin.style.left = (baseLeft + dx) + '%';
+      }, 50);
+    });
+  }
+  animatePins();
+
+  function focusPin(pinId) {
+    const pin = document.getElementById(pinId);
+    if (!pin) return;
+    pin.style.transform = 'translate(-50%,-50%) scale(1.3)';
+    pin.querySelector('.pin-dot').style.boxShadow = '0 0 20px currentColor';
+    setTimeout(() => {
+      pin.style.transform = 'translate(-50%,-50%) scale(1)';
+      pin.querySelector('.pin-dot').style.boxShadow = '';
+    }, 1200);
+    pin.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  let sosFiring = false;
+  async function triggerFamilySOS() {
+    if (sosFiring) return;
+    sosFiring = true;
+    const btn = document.getElementById('sosFamilyBtn');
+    const status = document.getElementById('sosFamilyStatus');
+
+    btn.style.background = '#b91c1c';
+    btn.textContent = '...';
+    status.textContent = '⏳ Sending SOS to all family members...';
+    status.style.color = 'var(--ll-amber)';
+
+    await new Promise(r => setTimeout(r, 800));
+    status.textContent = '📲 Priya notified ✓';
+    status.style.color = 'var(--ll-green)';
+
+    await new Promise(r => setTimeout(r, 600));
+    status.textContent = '📲 Priya ✓ · Dadu notified ✓';
+
+    await new Promise(r => setTimeout(r, 600));
+    status.textContent = '📲 Priya ✓ · Dadu ✓ · Ananya notified ✓';
+
+    await new Promise(r => setTimeout(r, 500));
+    btn.textContent = '✓';
+    btn.style.background = 'linear-gradient(135deg, var(--ll-green), #16a34a)';
+    btn.style.borderColor = 'var(--ll-green)';
+    status.textContent = '✅ All 3 family members alerted with your live location!';
+
+    // Update Priya's card to show alert
+    const priyaCard = document.querySelectorAll('.member-card')[1];
+    if (priyaCard) {
+      const badge = priyaCard.querySelector('.member-status-badge');
+      badge.textContent = '🚨 SOS Received';
+      badge.className = 'member-status-badge msb-alert';
+    }
+
+    setTimeout(() => {
+      sosFiring = false;
+      btn.textContent = 'SOS';
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      status.textContent = 'Tap to send alert to all 3 family members';
+      status.style.color = '';
+      const priyaCard = document.querySelectorAll('.member-card')[1];
+      if (priyaCard) {
+        const badge = priyaCard.querySelector('.member-status-badge');
+        badge.textContent = '● Moving';
+        badge.className = 'member-status-badge msb-moving';
+      }
+    }, 5000);
+  }
+</script>
+</body>
+</html>
