@@ -3,17 +3,17 @@
 //  Auto-injects a consistent nav bar into every page
 // ═══════════════════════════════════════════════════════════════
 
-(function() {
+(function () {
   'use strict';
 
   const NAV_LINKS = [
-    { href: 'index.html',                   label: 'Home',            emoji: '🏠' },
-    { href: 'lifeline.html',                label: 'App Demo',        emoji: '🚨' },
-    { href: 'lifeline_accident_demo.html',  label: 'Accident Flow',   emoji: '🚗' },
-    { href: 'hackathon-demo.html',          label: 'Scenario Deck',   emoji: '🎯' },
-    { href: 'medical-profile.html',         label: 'Medical Profile', emoji: '🩺' },
-    { href: 'family-tracker.html',          label: 'Family Tracker',  emoji: '👨‍👩‍👧‍👦' },
-    { href: 'architecture.html',            label: 'Architecture',    emoji: '⚙️' },
+    { href: 'index.html', label: 'Home', emoji: '🏠' },
+    { href: 'lifeline.html', label: 'App Demo', emoji: '🚨' },
+    { href: 'lifeline_accident_demo.html', label: 'Accident Flow', emoji: '🚗' },
+    { href: 'hackathon-demo.html', label: 'Scenario Deck', emoji: '🎯' },
+    { href: 'medical-profile.html', label: 'Medical Profile', emoji: '🩺' },
+    { href: 'family-tracker.html', label: 'Family Tracker', emoji: '👨‍👩‍👧‍👦' },
+    { href: 'architecture.html', label: 'Architecture', emoji: '⚙️' },
   ];
 
   // Determine which page is active
