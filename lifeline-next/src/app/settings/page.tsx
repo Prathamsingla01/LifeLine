@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Settings, User, Shield, Bell, MapPin, Lock, Moon, Smartphone } from "lucide-react";
+import { Settings, User, Shield, Bell, Lock, Moon, Sun, Smartphone } from "lucide-react";
+import { useThemeStore } from "@/lib/store";
 
 function ToggleSwitch({ on, onChange }: { on: boolean; onChange: () => void }) {
   return (
@@ -27,6 +28,7 @@ export default function SettingsPage() {
   const [sosVibrate, setSosVibrate] = useState(true);
   const [autoDetect, setAutoDetect] = useState(true);
   const [saved, setSaved] = useState(false);
+  const { mode, toggle: toggleTheme } = useThemeStore();
 
   function save() { setSaved(true); setTimeout(() => setSaved(false), 2000); }
 
@@ -72,8 +74,8 @@ export default function SettingsPage() {
         {/* Appearance */}
         <motion.div variants={item} className="bg-ll-surface border border-ll-border rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4"><Moon className="w-5 h-5 text-ll-text3" /><span className="font-mono text-[10px] tracking-[2px] uppercase text-ll-text3">Appearance</span></div>
-          <SettingRow label="Dark mode" desc="LifeLine is designed for dark mode — always on">
-            <span className="text-xs font-semibold text-ll-green bg-ll-green/10 px-3 py-1 rounded-full">Always On</span>
+          <SettingRow label="Dark mode" desc="Toggle between dark and light theme">
+            <ToggleSwitch on={mode === "dark"} onChange={toggleTheme} />
           </SettingRow>
         </motion.div>
 

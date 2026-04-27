@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { User, Droplets, Pill, FileText, Phone, Building2, Shield } from "lucide-react";
+import { QREmergencyCard } from "@/components/features/QREmergency";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
@@ -124,6 +125,9 @@ export default function ProfilePage() {
           </div>
         </motion.div>
       </motion.div>
+
+      {/* QR Emergency Scan */}
+      <QREmergencyCard />
 
       {/* Emergency Share */}
       <div className="bg-ll-surface border border-ll-border rounded-2xl p-6 text-center">

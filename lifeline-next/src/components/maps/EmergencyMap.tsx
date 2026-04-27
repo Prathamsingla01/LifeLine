@@ -21,9 +21,18 @@ export interface MapRoute {
   dashed?: boolean;
 }
 
+export interface DangerZone {
+  center: [number, number];
+  radius: number;
+  color?: string;
+  label?: string;
+  fillOpacity?: number;
+}
+
 interface EmergencyMapProps {
   markers?: MapMarker[];
   routes?: MapRoute[];
+  dangerZones?: DangerZone[];
   center?: [number, number];
   zoom?: number;
   height?: string;
@@ -31,6 +40,7 @@ interface EmergencyMapProps {
   onMarkerClick?: (marker: MapMarker) => void;
   interactive?: boolean;
   showZoom?: boolean;
+  animateAmbulance?: boolean;
 }
 
 const TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
@@ -49,6 +59,11 @@ function createCustomIcon(marker: MapMarker) {
   const severity = marker.severity;
   const color = severity === "critical" ? "#ef4444" : severity === "moderate" ? "#f59e0b" : config.color;
 
+  const isAmbulance = marker.type === "ambulance";
+  const ambulanceGlow = isAmbulance
+    ? `box-shadow: 0 0 12px ${color}60, 0 0 24px ${color}30;`
+    : "";
+
   const pulseRings = marker.pulse
     ? `<div style="position:absolute;inset:-8px;border-radius:50%;border:2px solid ${color};opacity:0.4;animation:map-ping 1.5s ease-out infinite"></div>
        <div style="position:absolute;inset:-16px;border-radius:50%;border:1px solid ${color};opacity:0.2;animation:map-ping 1.5s ease-out 0.3s infinite"></div>`
@@ -59,7 +74,7 @@ function createCustomIcon(marker: MapMarker) {
     html: `
       <div style="position:relative;display:flex;align-items:center;justify-content:center">
         ${pulseRings}
-        <div style="width:${config.size}px;height:${config.size}px;border-radius:50%;background:${color}22;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:${config.size * 0.5}px;backdrop-filter:blur(4px);position:relative;z-index:2">
+        <div style="width:${config.size}px;height:${config.size}px;border-radius:50%;background:${color}22;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:${config.size * 0.5}px;backdrop-filter:blur(4px);position:relative;z-index:2;${ambulanceGlow}">
           ${config.emoji}
         </div>
       </div>
@@ -77,6 +92,7 @@ const DEFAULT_ZOOM = 12;
 export function EmergencyMap({
   markers = [],
   routes = [],
+  dangerZones = [],
   center = DEFAULT_CENTER,
   zoom = DEFAULT_ZOOM,
   height = "h-80",
@@ -84,9 +100,12 @@ export function EmergencyMap({
   onMarkerClick,
   interactive = true,
   showZoom = true,
+  animateAmbulance = false,
 }: EmergencyMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const ambulanceMarkerRef = useRef<L.Marker | null>(null);
+  const animFrameRef = useRef<number>(0);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -115,21 +134,45 @@ export function EmergencyMap({
     mapInstanceRef.current = map;
 
     return () => {
+      cancelAnimationFrame(animFrameRef.current);
       map.remove();
       mapInstanceRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
 
-  // Update markers
+  // Update markers, routes, danger zones
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // Clear existing markers
+    // Clear existing layers (except tile layer)
     map.eachLayer((layer) => {
-      if (layer instanceof L.Marker || layer instanceof L.Polyline || layer instanceof L.CircleMarker) {
+      if (layer instanceof L.Marker || layer instanceof L.Polyline || layer instanceof L.CircleMarker || layer instanceof L.Circle) {
         map.removeLayer(layer);
+      }
+    });
+
+    // Add danger zones (circles)
+    dangerZones.forEach((zone) => {
+      L.circle(zone.center, {
+        radius: zone.radius,
+        color: zone.color || "#ef4444",
+        fillColor: zone.color || "#ef4444",
+        fillOpacity: zone.fillOpacity ?? 0.08,
+        weight: 2,
+        dashArray: "6 4",
+      }).addTo(map);
+
+      if (zone.label) {
+        L.marker(zone.center, {
+          icon: L.divIcon({
+            className: "danger-zone-label",
+            html: `<div style="color:${zone.color || "#ef4444"};font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;text-shadow:0 0 8px rgba(0,0,0,0.8);white-space:nowrap">${zone.label}</div>`,
+            iconSize: [100, 20],
+            iconAnchor: [50, 10],
+          }),
+        }).addTo(map);
       }
     });
 
@@ -153,7 +196,7 @@ export function EmergencyMap({
       }
     });
 
-    // Add routes
+    // Add routes with animated dashed lines
     routes.forEach((route) => {
       L.polyline([route.from, route.to], {
         color: route.color || "#3b82f6",
@@ -162,7 +205,37 @@ export function EmergencyMap({
         dashArray: route.dashed ? "8 8" : undefined,
       }).addTo(map);
     });
-  }, [markers, routes, onMarkerClick]);
+
+    // Animate ambulance markers along routes
+    if (animateAmbulance && routes.length > 0) {
+      const route = routes[0];
+      const ambIcon = createCustomIcon({
+        id: "amb-anim",
+        lat: 0,
+        lng: 0,
+        type: "ambulance",
+        label: "AMB-204",
+        pulse: true,
+      });
+
+      const ambMarker = L.marker(route.from, { icon: ambIcon, zIndexOffset: 1000 }).addTo(map);
+      ambulanceMarkerRef.current = ambMarker;
+
+      let progress = 0;
+      function animateStep() {
+        progress += 0.003;
+        if (progress > 1) progress = 0;
+
+        const lat = route.from[0] + (route.to[0] - route.from[0]) * progress;
+        const lng = route.from[1] + (route.to[1] - route.from[1]) * progress;
+        ambMarker.setLatLng([lat, lng]);
+
+        animFrameRef.current = requestAnimationFrame(animateStep);
+      }
+
+      animateStep();
+    }
+  }, [markers, routes, dangerZones, onMarkerClick, animateAmbulance]);
 
   if (!mounted) {
     return (

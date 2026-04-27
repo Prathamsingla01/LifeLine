@@ -2,9 +2,10 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { Shield, Activity, Clock, Users, AlertTriangle, Heart, MapPin, Zap } from "lucide-react";
+import { Shield, Activity, Clock, Users, AlertTriangle, Heart, MapPin, Zap, QrCode } from "lucide-react";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { Badge } from "@/components/ui/Badge";
+import { GamificationBadges } from "@/components/features/GamificationBadges";
 import type { MapMarker } from "@/components/maps/EmergencyMap";
 
 const EmergencyMap = dynamic(() => import("@/components/maps/EmergencyMap").then(m => ({ default: m.EmergencyMap })), { ssr: false, loading: () => <div className="h-52 skeleton rounded-2xl" /> });
@@ -132,8 +133,36 @@ export default function DashboardPage() {
               </div>
               <div className="text-xs text-ll-text2">Profile complete, family linked, emergency plan set</div>
             </motion.div>
+
+            {/* Gamification Badges */}
+            <motion.div variants={item} className="bg-ll-surface border border-ll-border rounded-2xl p-5">
+              <GamificationBadges compact={false} />
+            </motion.div>
           </div>
         </div>
+
+        {/* Emergency QR Quick Access */}
+        <motion.div variants={item} className="bg-ll-surface border border-ll-border rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-ll-red" />
+              <span className="font-mono text-[10px] tracking-[2px] uppercase text-ll-text3">Emergency QR</span>
+            </div>
+            <span className="text-[10px] text-ll-green font-semibold bg-ll-green/10 px-2 py-0.5 rounded-full">Active</span>
+          </div>
+          <p className="text-sm text-ll-text2 mb-3">Your medical profile is encoded in a scannable QR code. First responders can access critical data instantly.</p>
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 bg-white/5 rounded-xl border border-ll-border2 flex items-center justify-center">
+              <QrCode className="w-10 h-10 text-ll-red/60" />
+            </div>
+            <div className="flex-1 space-y-1.5">
+              <div className="flex justify-between text-xs"><span className="text-ll-text3">Blood Type</span><span className="font-semibold text-ll-red">O−</span></div>
+              <div className="flex justify-between text-xs"><span className="text-ll-text3">Allergies</span><span className="font-semibold text-ll-amber">Penicillin</span></div>
+              <div className="flex justify-between text-xs"><span className="text-ll-text3">Emergency</span><span className="font-semibold">Priya Mehta</span></div>
+              <div className="flex justify-between text-xs"><span className="text-ll-text3">LifeLine ID</span><span className="font-mono font-semibold text-ll-green">LL-00482</span></div>
+            </div>
+          </div>
+        </motion.div>
       </motion.div>
     </div>
   );

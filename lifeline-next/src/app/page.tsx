@@ -3,7 +3,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion, useInView } from "framer-motion";
 import { useRef, useEffect, useState, useCallback } from "react";
-import { Shield, Zap, Heart, MapPin, Users, Code2, ArrowRight, Activity } from "lucide-react";
+import { Shield, Zap, Heart, MapPin, Users, Code2, ArrowRight, Activity, Globe2, Radio } from "lucide-react";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { Button } from "@/components/ui/Button";
 import type { MapMarker } from "@/components/maps/EmergencyMap";
@@ -11,6 +11,11 @@ import type { MapMarker } from "@/components/maps/EmergencyMap";
 const EmergencyMap = dynamic(() => import("@/components/maps/EmergencyMap").then(m => ({ default: m.EmergencyMap })), {
   ssr: false,
   loading: () => <div className="h-[400px] bg-ll-surface rounded-2xl skeleton" />,
+});
+
+const GlobeComponent = dynamic(() => import("@/components/features/Globe").then(m => ({ default: m.Globe })), {
+  ssr: false,
+  loading: () => <div className="w-[400px] h-[400px] bg-ll-surface/30 rounded-full skeleton" />,
 });
 
 /* ── TYPEWRITER ── */
@@ -45,24 +50,66 @@ function Typewriter({ words, className = "" }: { words: string[]; className?: st
   );
 }
 
-/* ── PARTICLES ── */
+/* ── PARTICLES (enhanced with parallax) ── */
 function Particles() {
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-      {Array.from({ length: 30 }).map((_, i) => (
-        <div
-          key={i}
-          className="absolute rounded-full"
-          style={{
-            width: 1 + Math.random() * 2,
-            height: 1 + Math.random() * 2,
-            left: `${Math.random() * 100}%`,
-            background: ["rgba(239,68,68,0.3)", "rgba(59,130,246,0.2)", "rgba(34,197,94,0.2)", "rgba(245,158,11,0.2)"][i % 4],
-            animation: `float-particle ${8 + Math.random() * 12}s linear ${Math.random() * 8}s infinite`,
-          }}
-        />
-      ))}
+      {Array.from({ length: 40 }).map((_, i) => {
+        const size = 1 + Math.random() * 3;
+        const colors = ["rgba(239,68,68,0.3)", "rgba(59,130,246,0.2)", "rgba(34,197,94,0.2)", "rgba(245,158,11,0.2)", "rgba(168,85,247,0.15)"];
+        return (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              width: size,
+              height: size,
+              left: `${Math.random() * 100}%`,
+              background: colors[i % colors.length],
+              animation: `float-particle ${8 + Math.random() * 15}s linear ${Math.random() * 8}s infinite`,
+              filter: i % 3 === 0 ? `blur(${Math.random() * 2}px)` : undefined,
+            }}
+          />
+        );
+      })}
     </div>
+  );
+}
+
+/* ── LIVE TICKER ── */
+function LiveTicker() {
+  const [incidents, setIncidents] = useState(2847);
+  const [responding, setResponding] = useState(12);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setIncidents(prev => prev + Math.floor(Math.random() * 3));
+      setResponding(prev => Math.max(5, prev + (Math.random() > 0.5 ? 1 : -1)));
+    }, 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <motion.div
+      className="flex items-center gap-6 bg-ll-surface/60 border border-ll-border rounded-full px-5 py-2 backdrop-blur-md"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 1.2 }}
+    >
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-ll-red ticker-live" />
+        <span className="text-xs font-mono text-ll-text3">LIVE</span>
+      </div>
+      <div className="text-xs font-mono text-ll-text2">
+        <span className="text-ll-red font-bold">{incidents}</span> incidents tracked
+      </div>
+      <div className="text-xs font-mono text-ll-text2">
+        <span className="text-ll-green font-bold">{responding}</span> responders active
+      </div>
+      <div className="text-xs font-mono text-ll-text2">
+        <span className="text-ll-blue font-bold">847</span> users online
+      </div>
+    </motion.div>
   );
 }
 
@@ -90,7 +137,7 @@ const steps = [
   { num: "04", title: "Dispatch", desc: "Nearest ambulance assigned, ETA calculated, medical profile sent", color: "text-ll-green" },
 ];
 
-const techChips = ["FastAPI", "Node.js", "PostgreSQL", "PostGIS", "Socket.io", "Firebase FCM", "Twilio SMS", "Supabase", "React", "React Native", "Google Maps", "Pydantic"];
+const techChips = ["FastAPI", "Node.js", "PostgreSQL", "PostGIS", "Socket.io", "Firebase FCM", "Twilio SMS", "Supabase", "React", "Next.js", "Leaflet", "Framer Motion"];
 
 const heroMarkers: MapMarker[] = [
   { id: "h1", lat: 28.6315, lng: 77.2167, type: "emergency", label: "Car Accident", popup: "INC-2847 · Critical", severity: "critical", pulse: true },
@@ -111,62 +158,74 @@ export default function Home() {
     <>
       <Particles />
 
-      {/* ── HERO ── */}
-      <section className="relative pt-20 pb-8 px-6 text-center overflow-hidden">
+      {/* ── HERO WITH GLOBE ── */}
+      <section className="relative pt-12 pb-4 px-6 overflow-hidden">
         <div className="absolute top-[-120px] left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-[radial-gradient(ellipse,rgba(239,68,68,0.12)_0%,rgba(239,68,68,0.03)_40%,transparent_70%)] pointer-events-none" />
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-ll-red/8 border border-ll-red/20 text-xs font-semibold text-ll-red tracking-wide mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-ll-red animate-pulse-dot" />
-            HACKATHON BUILD · LIVE DEMO
+        <div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-8 lg:gap-4">
+          {/* Left — Text */}
+          <div className="flex-1 text-center lg:text-left z-10">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-ll-red/8 border border-ll-red/20 text-xs font-semibold text-ll-red tracking-wide mb-6">
+                <span className="w-1.5 h-1.5 rounded-full bg-ll-red animate-pulse-dot" />
+                HACKATHON BUILD · LIVE DEMO
+              </div>
+            </motion.div>
+
+            <motion.h1
+              className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tighter leading-[1.05] mb-6 relative"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.1 }}
+            >
+              When Every Second<br />
+              <Typewriter
+                words={["Saves a Life", "Counts", "Matters Most", "Changes Everything"]}
+                className="gradient-text"
+              />
+            </motion.h1>
+
+            <motion.p
+              className="text-base lg:text-lg text-ll-text2 max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              AI-powered emergency response platform with automatic accident detection,
+              disaster mapping, family safety alerts, and transparent community fundraising.
+            </motion.p>
+
+            <motion.div
+              className="flex gap-3 justify-center lg:justify-start flex-wrap mb-6"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+            >
+              <Button variant="primary" size="lg">
+                <Link href="/demo" className="flex items-center gap-2">
+                  🚨 Launch App Demo
+                </Link>
+              </Button>
+              <Button variant="secondary" size="lg">
+                <Link href="/scenarios" className="flex items-center gap-2">
+                  🎯 View Scenarios
+                </Link>
+              </Button>
+            </motion.div>
+
+            <LiveTicker />
           </div>
-        </motion.div>
 
-        <motion.h1
-          className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-[1.05] mb-6 relative z-10"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1 }}
-        >
-          When Every Second<br />
-          <Typewriter
-            words={["Saves a Life", "Counts", "Matters Most", "Changes Everything"]}
-            className="gradient-text"
-          />
-        </motion.h1>
-
-        <motion.p
-          className="text-lg text-ll-text2 max-w-xl mx-auto mb-10 leading-relaxed"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
-          AI-powered emergency response platform with automatic accident detection,
-          disaster mapping, family safety alerts, and transparent community fundraising.
-        </motion.p>
-
-        <motion.div
-          className="flex gap-3 justify-center flex-wrap"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-        >
-          <Button variant="primary" size="lg">
-            <Link href="/demo" className="flex items-center gap-2">
-              🚨 Launch App Demo
-            </Link>
-          </Button>
-          <Button variant="secondary" size="lg">
-            <Link href="/scenarios" className="flex items-center gap-2">
-              🎯 View Scenarios
-            </Link>
-          </Button>
-        </motion.div>
+          {/* Right — Globe */}
+          <div className="flex-shrink-0 hidden lg:block">
+            <GlobeComponent />
+          </div>
+        </div>
       </section>
 
       {/* ── LIVE MAP ── */}
       <motion.section
-        className="px-6 pb-12 max-w-5xl mx-auto"
+        className="px-6 py-8 max-w-5xl mx-auto"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, delay: 0.7 }}
@@ -249,8 +308,33 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── NEW FEATURES HIGHLIGHT ── */}
+      <section className="py-20 px-6">
+        <div className="text-center mb-14">
+          <div className="font-mono text-[11px] tracking-[3px] uppercase text-ll-purple mb-3">What&apos;s New</div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">AI-Powered Intelligence</h2>
+          <p className="text-base text-ll-text2 max-w-md mx-auto">Features that make LifeLine more than just an app — it&apos;s an emergency operating system.</p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+          {[
+            { icon: "🧠", title: "AI Risk Map", desc: "Predict danger zones before incidents happen", color: "from-ll-purple/10 to-transparent", border: "border-ll-purple/20", href: "/risk-map" },
+            { icon: "📡", title: "Live Feed", desc: "Real-time emergency stream across your region", color: "from-ll-red/10 to-transparent", border: "border-ll-red/20", href: "/feed" },
+            { icon: "🔔", title: "Smart Alerts", desc: "Context-aware notifications that matter", color: "from-ll-amber/10 to-transparent", border: "border-ll-amber/20", href: "/notifications" },
+            { icon: "🏅", title: "Gamification", desc: "Safety scores, badges, and community levels", color: "from-ll-green/10 to-transparent", border: "border-ll-green/20", href: "/dashboard" },
+          ].map((f, i) => (
+            <motion.div key={f.title} initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+              <Link href={f.href} className={`block bg-gradient-to-br ${f.color} border ${f.border} rounded-2xl p-5 hover:-translate-y-1 transition-all duration-300`}>
+                <div className="text-3xl mb-3">{f.icon}</div>
+                <div className="text-sm font-bold mb-1">{f.title}</div>
+                <div className="text-xs text-ll-text3">{f.desc}</div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
       {/* ── TECH STACK ── */}
-      <section className="py-16 px-6 text-center">
+      <section className="py-16 px-6 text-center border-t border-ll-border">
         <div className="font-mono text-[11px] tracking-[3px] uppercase text-ll-red mb-3">Built With</div>
         <h2 className="text-3xl font-extrabold tracking-tight mb-8">Production-Ready Stack</h2>
         <div className="flex flex-wrap justify-center gap-2.5 max-w-3xl mx-auto">

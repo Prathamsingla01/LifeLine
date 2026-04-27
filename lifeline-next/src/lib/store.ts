@@ -109,3 +109,50 @@ export const useFeedStore = create<FeedState>((set) => ({
   items: initialFeed,
   addItem: (item) => set((s) => ({ items: [item, ...s.items] })),
 }));
+
+/* ── Theme Store ── */
+type ThemeMode = "dark" | "light";
+
+interface ThemeState {
+  mode: ThemeMode;
+  toggle: () => void;
+  setMode: (mode: ThemeMode) => void;
+}
+
+export const useThemeStore = create<ThemeState>((set) => ({
+  mode: "dark",
+  toggle: () =>
+    set((s) => {
+      const next = s.mode === "dark" ? "light" : "dark";
+      if (typeof document !== "undefined") {
+        document.documentElement.classList.toggle("light", next === "light");
+        localStorage.setItem("ll-theme", next);
+      }
+      return { mode: next };
+    }),
+  setMode: (mode) => {
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.toggle("light", mode === "light");
+      localStorage.setItem("ll-theme", mode);
+    }
+    set({ mode });
+  },
+}));
+
+/* ── Sidebar Store ── */
+interface SidebarState {
+  open: boolean;
+  collapsed: boolean;
+  toggle: () => void;
+  setOpen: (open: boolean) => void;
+  toggleCollapse: () => void;
+}
+
+export const useSidebarStore = create<SidebarState>((set) => ({
+  open: false,
+  collapsed: false,
+  toggle: () => set((s) => ({ open: !s.open })),
+  setOpen: (open) => set({ open }),
+  toggleCollapse: () => set((s) => ({ collapsed: !s.collapsed })),
+}));
+

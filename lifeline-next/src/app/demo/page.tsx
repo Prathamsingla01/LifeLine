@@ -1,7 +1,11 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, MapPin, Navigation, Heart, AlertTriangle, Phone, Clock, Users, Ambulance, Building2 } from "lucide-react";
+import type { MapMarker, DangerZone, MapRoute } from "@/components/maps/EmergencyMap";
+
+const EmergencyMap = dynamic(() => import("@/components/maps/EmergencyMap").then(m => ({ default: m.EmergencyMap })), { ssr: false, loading: () => <div className="h-52 skeleton rounded-2xl" /> });
 
 const tabs = [
   { id: "home", label: "Home", icon: Shield },
@@ -127,16 +131,39 @@ function DispatchView() {
 }
 
 /* ── SAFE ZONE ── */
+const safeZoneMarkers: MapMarker[] = [
+  { id: "sz-user", lat: 28.6139, lng: 77.2090, type: "user", label: "You", popup: "Your Location", pulse: true },
+  { id: "sz-safe", lat: 28.6250, lng: 77.1950, type: "hospital", label: "Safe Zone B", popup: "Capacity: 800 · 2.1km away" },
+  { id: "sz-safe2", lat: 28.6050, lng: 77.2250, type: "hospital", label: "Safe Zone C", popup: "Capacity: 1200 · 1.8km away" },
+];
+
+const safeZoneDangers: DangerZone[] = [
+  { center: [28.6300, 77.2200], radius: 600, color: "#ef4444", label: "🔥 Fire Zone" },
+  { center: [28.6000, 77.2100], radius: 800, color: "#f59e0b", label: "🌊 Flood Zone" },
+];
+
+const safeZoneRoutes: MapRoute[] = [
+  { from: [28.6139, 77.2090], to: [28.6250, 77.1950], color: "#22c55e", dashed: true },
+];
+
 function SafeZoneView() {
   const directions = ["Head North on MG Road — 200m", "Turn Left at T-Junction — 400m", "Enter Safe Zone Gate B — Arrive"];
   return (
     <div className="space-y-4">
-      <div className="bg-ll-surface border border-ll-border rounded-xl h-52 relative overflow-hidden">
-        <div className="absolute inset-0" style={{ backgroundImage: "linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
-        <div className="absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full border-2 border-dashed border-green-500/40 flex items-center justify-center"><span className="text-[10px] text-ll-green font-bold">SAFE</span></div>
-        <div className="absolute top-1/4 right-1/4 w-20 h-16 rounded-lg border-2 border-dashed border-red-500/30 flex items-center justify-center"><span className="text-[10px] text-ll-red">🔥 Fire</span></div>
-        <div className="absolute bottom-1/4 left-1/2 w-24 h-14 rounded-lg border-2 border-dashed border-amber-500/30 flex items-center justify-center"><span className="text-[10px] text-ll-amber">🌊 Flood</span></div>
-        <div className="absolute top-[45%] left-[20%] w-3 h-3 rounded-full bg-ll-blue glow-blue" />
+      <div className="relative">
+        <EmergencyMap
+          markers={safeZoneMarkers}
+          dangerZones={safeZoneDangers}
+          routes={safeZoneRoutes}
+          center={[28.615, 77.21]}
+          zoom={14}
+          height="h-64"
+          animateAmbulance={false}
+        />
+        <div className="absolute top-3 left-3 z-[500] glass rounded-lg px-2.5 py-1.5 flex items-center gap-2">
+          <Navigation className="w-3.5 h-3.5 text-ll-green" />
+          <span className="text-[10px] font-mono uppercase tracking-wider text-ll-text3">Safe Route Active</span>
+        </div>
       </div>
       <div className="bg-ll-surface border border-ll-border rounded-xl p-4">
         <div className="text-xs font-mono uppercase tracking-widest text-ll-text3 mb-3">Turn-by-Turn Navigation</div>

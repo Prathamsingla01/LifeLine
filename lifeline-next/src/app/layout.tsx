@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/nav/Navbar";
-import { AIChatbot } from "@/components/ai/AIChatbot";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { MainContent } from "@/components/layout/MainContent";
+import { AIChatbot } from "@/components/chat/AIChatbot";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
@@ -43,10 +44,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen antialiased">
-        <Navbar />
-        <main className="pt-16 pb-20 lg:pb-0">
-          {children}
-        </main>
+        <Sidebar />
+        <MainContent>{children}</MainContent>
         <AIChatbot />
       </body>
     </html>
