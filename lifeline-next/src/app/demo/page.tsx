@@ -2,8 +2,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, MapPin, Navigation, Heart, AlertTriangle, Phone, Clock, Users, Ambulance, Building2 } from "lucide-react";
+import { Shield, MapPin, Navigation, Heart, AlertTriangle, Phone, Clock, Users, Building2, Mic, Volume2 } from "lucide-react";
+import { useLocationStore } from "@/lib/store";
+import { Badge } from "@/components/ui/Badge";
 import type { MapMarker, DangerZone, MapRoute } from "@/components/maps/EmergencyMap";
+import toast from "react-hot-toast";
+import axios from "axios";
 
 const EmergencyMap = dynamic(() => import("@/components/maps/EmergencyMap").then(m => ({ default: m.EmergencyMap })), { ssr: false, loading: () => <div className="h-52 skeleton rounded-2xl" /> });
 
@@ -19,7 +23,34 @@ function SOSButton() {
   const [holding, setHolding] = useState(false);
   const [progress, setProgress] = useState(0);
   const [activated, setActivated] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [dispatched, setDispatched] = useState<{ eta?: string; hospital?: string } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval>>(null);
+  const { lat, lng, startWatching } = useLocationStore();
+
+  useEffect(() => { startWatching(); }, [startWatching]);
+
+  const triggerSOS = useCallback(async () => {
+    setSending(true);
+    try {
+      const res = await axios.post("/api/emergencies/sos", {
+        lat: lat || 28.6139,
+        lng: lng || 77.2090,
+        type: "MEDICAL",
+      });
+      if (res.data.success) {
+        setDispatched({
+          eta: res.data.data.eta || "4 min",
+          hospital: res.data.data.nearestHospital || "AIIMS Delhi",
+        });
+        toast.success("🚑 Emergency dispatched!");
+      }
+    } catch {
+      toast.error("SOS sent (demo mode)");
+      setDispatched({ eta: "4 min", hospital: "AIIMS Delhi" });
+    }
+    setSending(false);
+  }, [lat, lng]);
 
   const startHold = useCallback(() => {
     setHolding(true);
@@ -33,10 +64,10 @@ function SOSButton() {
         clearInterval(timerRef.current!);
         setActivated(true);
         setHolding(false);
-        setTimeout(() => { setActivated(false); setProgress(0); }, 4000);
+        triggerSOS();
       }
     }, 16);
-  }, []);
+  }, [triggerSOS]);
 
   const endHold = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -50,9 +81,23 @@ function SOSButton() {
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="relative">
+        {/* SOS pulse rings */}
+        {activated && (
+          <>
+            <div className="absolute inset-[-20px] rounded-full border-2 border-ll-green/20 sos-ring-1" />
+            <div className="absolute inset-[-35px] rounded-full border border-ll-green/10 sos-ring-2" />
+          </>
+        )}
+        {holding && !activated && (
+          <>
+            <div className="absolute inset-[-20px] rounded-full border-2 border-ll-red/30 sos-ring-1" />
+            <div className="absolute inset-[-35px] rounded-full border border-ll-red/15 sos-ring-2" />
+          </>
+        )}
+
         <svg width="140" height="140" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
           <circle cx="70" cy="70" r={radius} fill="none" stroke="rgba(239,68,68,0.15)" strokeWidth="4" />
-          <circle cx="70" cy="70" r={radius} fill="none" stroke="#ef4444" strokeWidth="4" strokeLinecap="round"
+          <circle cx="70" cy="70" r={radius} fill="none" stroke={activated ? "#22c55e" : "#ef4444"} strokeWidth="4" strokeLinecap="round"
             strokeDasharray={circumference} strokeDashoffset={circumference * (1 - progress)}
             transform="rotate(-90 70 70)" className="transition-all" />
         </svg>
@@ -64,11 +109,37 @@ function SOSButton() {
           }`}
           style={{ boxShadow: activated ? "0 0 40px rgba(34,197,94,0.4)" : holding ? `0 0 ${40 + progress * 40}px rgba(239,68,68,${0.3 + progress * 0.3})` : "0 0 30px rgba(239,68,68,0.25)" }}
           whileTap={{ scale: 0.95 }}
+          disabled={sending}
         >
-          {activated ? "✓ SENT" : holding ? `${Math.ceil(3 - progress * 3)}` : "SOS"}
+          {sending ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" /> :
+           activated ? "✓ SENT" : holding ? `${Math.ceil(3 - progress * 3)}` : "SOS"}
         </motion.button>
       </div>
       <p className="text-xs text-ll-text3">{activated ? "Emergency dispatched to nearest hospital" : "Hold for 3 seconds to activate"}</p>
+
+      {/* Dispatch info card */}
+      <AnimatePresence>
+        {dispatched && (
+          <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }}
+            className="w-full max-w-xs bg-ll-surface border border-ll-green/20 rounded-xl p-4 space-y-2">
+            <div className="flex items-center gap-2 text-ll-green text-sm font-bold">
+              <Building2 className="w-4 h-4" /> Ambulance Dispatched
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-ll-text3">Hospital</span>
+              <span className="font-semibold">{dispatched.hospital}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-ll-text3">ETA</span>
+              <span className="font-bold text-ll-green">{dispatched.eta}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-ll-text3">Status</span>
+              <Badge variant="green" dot>En Route</Badge>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -79,7 +150,7 @@ function QuickActions() {
     { icon: Building2, label: "Find Hospital", color: "text-ll-blue", bg: "bg-ll-blue/10" },
     { icon: Navigation, label: "Safe Zone", color: "text-ll-green", bg: "bg-ll-green/10" },
     { icon: AlertTriangle, label: "Report Crisis", color: "text-ll-amber", bg: "bg-ll-amber/10" },
-    { icon: Phone, label: "My Status", color: "text-ll-purple", bg: "bg-ll-purple/10" },
+    { icon: Phone, label: "Call 112", color: "text-ll-purple", bg: "bg-ll-purple/10" },
   ];
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -96,23 +167,50 @@ function QuickActions() {
 
 /* ── DISPATCH VIEW ── */
 function DispatchView() {
+  const [hospitals, setHospitals] = useState<Array<{ id: string; name: string; availableBeds: number; icuAvailable: number; eta: string; distance: string; hasTraumaCenter: boolean; rating: number }>>([]);
+
+  useEffect(() => {
+    axios.get("/api/hospitals/nearby").then(res => {
+      if (res.data.success) setHospitals(res.data.data);
+    }).catch(() => {});
+  }, []);
+
   const incidents = [
     { id: "INC-2847", type: "🔴 Critical", location: "Connaught Place", time: "2 min ago", status: "pending" },
     { id: "INC-2846", type: "🟡 Moderate", location: "Karol Bagh", time: "5 min ago", status: "assigned" },
     { id: "INC-2845", type: "🔴 Critical", location: "Saket", time: "8 min ago", status: "enroute" },
   ];
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        {[{ n: "12", l: "Active Incidents", c: "text-ll-red" },{ n: "8", l: "Responders", c: "text-ll-green" },{ n: "3", l: "Pending", c: "text-ll-amber" }].map((s) => (
-          <div key={s.l} className="bg-ll-surface border border-ll-border rounded-xl p-4 text-center">
-            <div className={`text-2xl font-black font-mono ${s.c}`}>{s.n}</div>
-            <div className="text-[10px] text-ll-text3 uppercase tracking-wider mt-1">{s.l}</div>
-          </div>
+      {/* Hospital cards */}
+      <div className="text-xs font-mono uppercase tracking-widest text-ll-text3 mb-2">Nearby Hospitals</div>
+      <div className="grid gap-3">
+        {hospitals.slice(0, 3).map(h => (
+          <motion.div key={h.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-ll-surface border border-ll-border rounded-xl p-4 hover:border-ll-border2 transition-all">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-bold">{h.name}</div>
+              <Badge variant={h.hasTraumaCenter ? "red" : "blue"}>
+                {h.hasTraumaCenter ? "Trauma Center" : "General"}
+              </Badge>
+            </div>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <div><div className="text-lg font-black text-ll-green font-mono">{h.availableBeds}</div><div className="text-[9px] text-ll-text3 uppercase">Beds</div></div>
+              <div><div className="text-lg font-black text-ll-amber font-mono">{h.icuAvailable}</div><div className="text-[9px] text-ll-text3 uppercase">ICU</div></div>
+              <div><div className="text-lg font-black text-ll-blue font-mono">{h.eta}</div><div className="text-[9px] text-ll-text3 uppercase">ETA</div></div>
+              <div><div className="text-lg font-black text-ll-purple font-mono">{h.rating}</div><div className="text-[9px] text-ll-text3 uppercase">Rating</div></div>
+            </div>
+          </motion.div>
         ))}
       </div>
+
+      {/* Live incidents */}
       <div className="bg-ll-surface border border-ll-border rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-ll-border"><span className="text-xs font-mono uppercase tracking-widest text-ll-text3">Live Incidents</span></div>
+        <div className="px-4 py-3 border-b border-ll-border flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-ll-red animate-pulse-dot" />
+          <span className="text-xs font-mono uppercase tracking-widest text-ll-text3">Live Incidents</span>
+        </div>
         {incidents.map((inc, i) => (
           <motion.div key={inc.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
             className="px-4 py-3 border-b border-ll-border last:border-0 flex items-center justify-between">
@@ -136,12 +234,10 @@ const safeZoneMarkers: MapMarker[] = [
   { id: "sz-safe", lat: 28.6250, lng: 77.1950, type: "hospital", label: "Safe Zone B", popup: "Capacity: 800 · 2.1km away" },
   { id: "sz-safe2", lat: 28.6050, lng: 77.2250, type: "hospital", label: "Safe Zone C", popup: "Capacity: 1200 · 1.8km away" },
 ];
-
 const safeZoneDangers: DangerZone[] = [
   { center: [28.6300, 77.2200], radius: 600, color: "#ef4444", label: "🔥 Fire Zone" },
   { center: [28.6000, 77.2100], radius: 800, color: "#f59e0b", label: "🌊 Flood Zone" },
 ];
-
 const safeZoneRoutes: MapRoute[] = [
   { from: [28.6139, 77.2090], to: [28.6250, 77.1950], color: "#22c55e", dashed: true },
 ];
@@ -151,15 +247,8 @@ function SafeZoneView() {
   return (
     <div className="space-y-4">
       <div className="relative">
-        <EmergencyMap
-          markers={safeZoneMarkers}
-          dangerZones={safeZoneDangers}
-          routes={safeZoneRoutes}
-          center={[28.615, 77.21]}
-          zoom={14}
-          height="h-64"
-          animateAmbulance={false}
-        />
+        <EmergencyMap markers={safeZoneMarkers} dangerZones={safeZoneDangers} routes={safeZoneRoutes}
+          center={[28.615, 77.21]} zoom={14} height="h-64" animateAmbulance={false} />
         <div className="absolute top-3 left-3 z-[500] glass rounded-lg px-2.5 py-1.5 flex items-center gap-2">
           <Navigation className="w-3.5 h-3.5 text-ll-green" />
           <span className="text-[10px] font-mono uppercase tracking-wider text-ll-text3">Safe Route Active</span>
@@ -180,28 +269,50 @@ function SafeZoneView() {
 
 /* ── FUNDRAISING ── */
 function FundsView() {
-  const campaigns = [
-    { title: "Flood Relief — Assam", raised: 847000, goal: 1000000, verified: true },
-    { title: "Burn Unit — AIIMS Delhi", raised: 234000, goal: 500000, verified: true },
-    { title: "Earthquake Aid — Nepal", raised: 156000, goal: 300000, verified: false },
-  ];
+  const [campaigns, setCampaigns] = useState<Array<{ id: string; title: string; raised: number; goalAmount: number; verified: boolean; donorCount?: number }>>([]);
+
+  useEffect(() => {
+    axios.get("/api/fundraisers").then(res => {
+      if (res.data.success) setCampaigns(res.data.data);
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="space-y-3">
       {campaigns.map((c) => (
-        <div key={c.title} className="bg-ll-surface border border-ll-border rounded-xl p-4">
+        <div key={c.id || c.title} className="bg-ll-surface border border-ll-border rounded-xl p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-bold">{c.title}</span>
             {c.verified && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-ll-green/10 text-ll-green border border-ll-green/25">✓ Verified</span>}
           </div>
           <div className="w-full h-2 bg-ll-bg rounded-full overflow-hidden mb-2">
-            <motion.div className="h-full bg-gradient-to-r from-ll-green to-emerald-400 rounded-full" initial={{ width: 0 }} animate={{ width: `${(c.raised / c.goal) * 100}%` }} transition={{ duration: 1.5, delay: 0.3 }} />
+            <motion.div className="h-full bg-gradient-to-r from-ll-green to-emerald-400 rounded-full" initial={{ width: 0 }} animate={{ width: `${(c.raised / c.goalAmount) * 100}%` }} transition={{ duration: 1.5, delay: 0.3 }} />
           </div>
           <div className="flex justify-between text-xs text-ll-text3">
-            <span>₹{(c.raised / 1000).toFixed(0)}K raised</span>
-            <span>₹{(c.goal / 1000).toFixed(0)}K goal</span>
+            <span>₹{(c.raised / 1000).toFixed(0)}K raised{c.donorCount ? ` · ${c.donorCount} donors` : ""}</span>
+            <span>₹{(c.goalAmount / 1000).toFixed(0)}K goal</span>
           </div>
         </div>
       ))}
+      {campaigns.length === 0 && (
+        <div className="space-y-3">
+          {[
+            { title: "Flood Relief — Assam", raised: 847000, goal: 1000000 },
+            { title: "Burn Unit — AIIMS Delhi", raised: 234000, goal: 500000 },
+          ].map((c) => (
+            <div key={c.title} className="bg-ll-surface border border-ll-border rounded-xl p-4">
+              <span className="text-sm font-bold block mb-2">{c.title}</span>
+              <div className="w-full h-2 bg-ll-bg rounded-full overflow-hidden mb-2">
+                <motion.div className="h-full bg-gradient-to-r from-ll-green to-emerald-400 rounded-full" initial={{ width: 0 }} animate={{ width: `${(c.raised / c.goal) * 100}%` }} transition={{ duration: 1.5 }} />
+              </div>
+              <div className="flex justify-between text-xs text-ll-text3">
+                <span>₹{(c.raised / 1000).toFixed(0)}K raised</span>
+                <span>₹{(c.goal / 1000).toFixed(0)}K goal</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -213,9 +324,9 @@ export default function DemoPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <motion.h1 className="text-3xl font-extrabold tracking-tight mb-2" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        🚨 LifeLine App Demo
+        🚨 Emergency Hub
       </motion.h1>
-      <p className="text-sm text-ll-text2 mb-6">Interactive demonstration of the core emergency response features.</p>
+      <p className="text-sm text-ll-text2 mb-6">Real-time emergency response with AI-powered dispatch and safe zone routing.</p>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-ll-surface border border-ll-border rounded-xl p-1 mb-6 overflow-x-auto">

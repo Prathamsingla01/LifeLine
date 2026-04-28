@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { CrashDetector } from "@/components/features/CrashDetector";
+import { VoiceSOS } from "@/components/features/VoiceSOS";
+import { AITriage } from "@/components/features/AITriage";
 
 const stages = [
   { id: 0, label: "Normal", color: "bg-ll-green", phone: "🚗 Driving Mode Active", log: ["GPS: 28.6139°N, 77.2090°E", "Speed: 45 km/h", "Accelerometer: Normal", "Gyroscope: Stable"], desc: "All sensors nominal. Real-time telemetry streaming." },
@@ -26,7 +29,6 @@ export default function AccidentPage() {
   const [autoPlay, setAutoPlay] = useState(false);
   const stage = stages[step];
 
-  // Timer countdown for step 2
   useEffect(() => {
     if (step === 2) {
       setTimerVal(10);
@@ -35,7 +37,6 @@ export default function AccidentPage() {
     }
   }, [step]);
 
-  // Auto-play mode
   useEffect(() => {
     if (!autoPlay) return;
     const timer = setTimeout(() => {
@@ -49,14 +50,14 @@ export default function AccidentPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
         <motion.h1 className="text-3xl font-extrabold tracking-tight" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          🚗 Car Accident Scenario
+          🚗 Accident Detection & AI Safety
         </motion.h1>
         <button onClick={() => { setAutoPlay(!autoPlay); if (!autoPlay) setStep(0); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-colors ${autoPlay ? "bg-ll-red/10 border-ll-red/25 text-ll-red" : "bg-ll-surface border-ll-border text-ll-text2 hover:border-ll-border2"}`}>
           {autoPlay ? <><Pause className="w-3.5 h-3.5" /> Stop Auto-Play</> : <><Play className="w-3.5 h-3.5" /> Auto-Play Demo</>}
         </button>
       </div>
-      <p className="text-sm text-ll-text2 mb-6">Step-by-step walkthrough of the automatic crash detection and response flow.</p>
+      <p className="text-sm text-ll-text2 mb-6">Step-by-step crash detection walkthrough + live AI safety tools.</p>
 
       {/* Progress Bar */}
       <div className="flex gap-1 mb-8">
@@ -73,10 +74,8 @@ export default function AccidentPage() {
           <div className="grid md:grid-cols-2 gap-5">
             {/* Phone Mockup */}
             <div className="flex justify-center">
-              <motion.div
-                className="w-64 bg-ll-surface rounded-[2rem] border-2 border-ll-border2 p-2 relative"
-                animate={step === 1 ? { x: [-3, 3, -3, 3, 0], transition: { duration: 0.4, repeat: 2 } } : {}}
-              >
+              <motion.div className="w-64 bg-ll-surface rounded-[2rem] border-2 border-ll-border2 p-2 relative"
+                animate={step === 1 ? { x: [-3, 3, -3, 3, 0], transition: { duration: 0.4, repeat: 2 } } : {}}>
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-full z-10" />
                 <div className={`rounded-[1.5rem] min-h-[420px] flex flex-col items-center justify-center p-6 text-center transition-colors ${
                   step === 1 ? "bg-gradient-to-b from-red-900/30 to-ll-bg" : step === 2 ? "bg-gradient-to-b from-amber-900/20 to-ll-bg" : step === 5 ? "bg-gradient-to-b from-green-900/20 to-ll-bg" : "bg-ll-bg"
@@ -85,7 +84,6 @@ export default function AccidentPage() {
                     {step === 0 ? "🚗" : step === 1 ? "💥" : step === 2 ? "⏱" : step === 3 ? "🚨" : step === 4 ? "📡" : "🚑"}
                   </motion.div>
                   <div className="text-lg font-bold mb-2">{stage.phone}</div>
-
                   {step === 2 && (
                     <div className="relative w-20 h-20 my-3">
                       <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
@@ -96,13 +94,10 @@ export default function AccidentPage() {
                       <span className="absolute inset-0 flex items-center justify-center text-2xl font-black text-ll-amber font-mono">{timerVal}</span>
                     </div>
                   )}
-
-                  {/* Red pulsing border during impact/SOS */}
                   {(step === 1 || step === 3) && (
                     <motion.div className="absolute inset-2 rounded-[1.5rem] border-2 border-ll-red/40 pointer-events-none"
                       animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ duration: 1, repeat: Infinity }} />
                   )}
-
                   <p className="text-xs text-ll-text3 mt-2">{stage.desc}</p>
                 </div>
               </motion.div>
@@ -145,7 +140,7 @@ export default function AccidentPage() {
       </AnimatePresence>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between mt-8">
+      <div className="flex items-center justify-between mt-8 mb-10">
         <button onClick={() => { setStep(Math.max(0, step - 1)); setAutoPlay(false); }} disabled={step === 0}
           className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-ll-surface border border-ll-border text-sm font-semibold disabled:opacity-30 hover:bg-ll-surface2 transition-colors">
           <ChevronLeft className="w-4 h-4" /> Back
@@ -156,6 +151,21 @@ export default function AccidentPage() {
           Next <ChevronRight className="w-4 h-4" />
         </button>
       </div>
+
+      {/* AI Safety Tools */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <h2 className="text-xl font-extrabold mb-1">🧠 AI Safety Tools</h2>
+        <p className="text-sm text-ll-text2 mb-6">Live AI-powered safety features running alongside crash detection.</p>
+
+        <div className="grid md:grid-cols-2 gap-5">
+          <CrashDetector sensitivity="medium" enabled />
+          <VoiceSOS />
+        </div>
+
+        <div className="mt-5">
+          <AITriage />
+        </div>
+      </motion.div>
     </div>
   );
 }

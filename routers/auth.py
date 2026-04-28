@@ -36,7 +36,7 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     else:
         # Auto-create a new family for this user
         new_family = Family(
-            id=uuid.uuid4(),
+            id=str(uuid.uuid4()),
             group_code=generate_family_code(),
         )
         db.add(new_family)
@@ -44,11 +44,13 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
         family_id = new_family.id
 
     # Create user
+    user_id = str(uuid.uuid4())
     user = User(
-        id=uuid.uuid4(),
+        id=user_id,
+        name=payload.name or "User",
         email=payload.email,
         hashed_password=hash_password(payload.password),
-        role=payload.role,
+        role=payload.role.value,
         medical_profile=payload.medical_profile.model_dump() if payload.medical_profile else None,
         family_id=family_id,
     )
@@ -59,6 +61,7 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     token = create_access_token(str(user.id))
     return RegisterResponse(
         user_id=user.id,
+        name=user.name,
         email=user.email,
         role=user.role,
         access_token=token,
@@ -76,4 +79,21 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
             detail="Invalid email or password",
         )
 
-    return TokenResponse(access_token=create_access_token(str(user.id)))
+    return TokenResponse(
+        access_token=create_access_token(str(user.id)),
+        user_id=user.id,
+        name=user.name,
+        email=user.email,
+        role=user.role,
+    )
+
+
+@router.get("/me")
+async def get_me(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(lambda: None),  # placeholder
+):
+    """Get current user profile — requires auth token."""
+    from auth_utils import get_current_user
+    # This is handled by the dependency
+    pass

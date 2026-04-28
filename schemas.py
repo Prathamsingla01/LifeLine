@@ -1,8 +1,27 @@
 from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional, Any
-from uuid import UUID
+from typing import Optional
 from datetime import datetime
-from models import UserRole, EmergencyType, EmergencyStatus
+import enum
+
+
+# Enums for validation
+class UserRole(str, enum.Enum):
+    child = "Child"
+    elder = "Elder"
+    admin = "Admin"
+
+
+class EmergencyType(str, enum.Enum):
+    medical = "Medical"
+    fire = "Fire"
+    accident = "Accident"
+    other = "Other"
+
+
+class EmergencyStatus(str, enum.Enum):
+    pending = "Pending"
+    responding = "Responding"
+    resolved = "Resolved"
 
 
 # --- Auth schemas ---
@@ -15,6 +34,7 @@ class MedicalProfile(BaseModel):
     emergency_contact: Optional[str] = None
 
 class RegisterRequest(BaseModel):
+    name: Optional[str] = "User"
     email: EmailStr
     password: str
     role: UserRole = UserRole.child
@@ -24,14 +44,15 @@ class RegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def password_min_length(cls, v):
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
         return v
 
 class RegisterResponse(BaseModel):
-    user_id: UUID
+    user_id: str
+    name: str
     email: str
-    role: UserRole
+    role: str
     access_token: str
     token_type: str = "bearer"
 
@@ -42,6 +63,10 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    user_id: str
+    name: str
+    email: str
+    role: str
 
 
 # --- Emergency schemas ---
@@ -67,11 +92,12 @@ class ReportEmergencyRequest(BaseModel):
         return v
 
 class EmergencyResponse(BaseModel):
-    emergency_id: UUID
-    type: EmergencyType
-    status: EmergencyStatus
+    emergency_id: str
+    type: str
+    status: str
     latitude: float
     longitude: float
+    description: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -103,8 +129,9 @@ class CreateFundraiserRequest(BaseModel):
     proof_document_url: Optional[str] = None
 
 class FundraiserResponse(BaseModel):
-    id: UUID
+    id: str
     title: str
+    description: Optional[str] = None
     goal_amount: float
     raised_amount: float
     verified: bool

@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/Badge";
 import type { MapMarker } from "@/components/maps/EmergencyMap";
+import axios from "axios";
 
 const EmergencyMap = dynamic(() => import("@/components/maps/EmergencyMap").then(m => ({ default: m.EmergencyMap })), { ssr: false, loading: () => <div className="h-80 skeleton rounded-2xl" /> });
 

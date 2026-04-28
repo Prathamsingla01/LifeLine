@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Filter, MapPin, Clock, Users } from "lucide-react";
 import { useFeedStore, type FeedItem } from "@/lib/store";
 import { Badge } from "@/components/ui/Badge";
+import { FeedItemSkeleton } from "@/components/ui/Skeleton";
 
 const typeConfig: Record<string, { emoji: string; label: string; color: "red" | "amber" | "blue" | "green" | "purple" }> = {
   accident: { emoji: "🚗", label: "Accident", color: "red" },
@@ -20,9 +21,11 @@ const statusStyle: Record<string, string> = {
 };
 
 export default function FeedPage() {
-  const { items, addItem } = useFeedStore();
+  const { items, addItem, fetchFeed, isLoading } = useFeedStore();
   const [filter, setFilter] = useState("all");
   const [newCount, setNewCount] = useState(0);
+
+  useEffect(() => { fetchFeed(); }, [fetchFeed]);
 
   // Simulate new incoming incidents
   useEffect(() => {

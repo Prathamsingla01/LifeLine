@@ -17,7 +17,7 @@ async def create_fundraiser(
     current_user: User = Depends(get_current_user),
 ):
     fundraiser = Fundraiser(
-        id=uuid.uuid4(),
+        id=str(uuid.uuid4()),
         creator_id=current_user.id,
         title=payload.title,
         description=payload.description,
@@ -43,7 +43,7 @@ async def list_fundraisers(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/fundraisers/{fundraiser_id}", response_model=FundraiserResponse)
-async def get_fundraiser(fundraiser_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def get_fundraiser(fundraiser_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Fundraiser).where(Fundraiser.id == fundraiser_id))
     fundraiser = result.scalar_one_or_none()
     if not fundraiser:

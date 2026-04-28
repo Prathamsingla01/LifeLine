@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User, Droplets, Pill, FileText, Phone, Building2, Shield } from "lucide-react";
 import { QREmergencyCard } from "@/components/features/QREmergency";
+import { useAuthStore } from "@/lib/store";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
@@ -32,26 +33,42 @@ export default function ProfilePage() {
   const [sharing, setSharing] = useState(false);
   const [shareSteps, setShareSteps] = useState<string[]>([]);
   const [shareDone, setShareDone] = useState(false);
+  const { user, profile, emergencyContacts, fetchUser } = useAuthStore();
+
+  useEffect(() => { fetchUser(); }, [fetchUser]);
 
   async function simulateShare() {
     setSharing(true); setShareSteps([]); setShareDone(false);
-    const steps = ["🔐 Encrypting medical profile...","📍 GPS coordinates locked: 28.6139°N, 77.2090°E","🏥 Profile sent to AIIMS Emergency Ward","👨‍👩‍👧 Family contacts notified (Priya, Rahul)","📋 Insurance details forwarded","✅ All data received — Latency: 3.2s"];
+    const steps = [
+      "🔐 Encrypting medical profile...",
+      `📍 GPS coordinates locked: 28.6139°N, 77.2090°E`,
+      "🏥 Profile sent to AIIMS Emergency Ward",
+      `👨‍👩‍👧 Family contacts notified (${emergencyContacts?.map(c => c.name.split(" ")[0]).join(", ") || "contacts"})`,
+      "📋 Insurance details forwarded",
+      "✅ All data received — Latency: 3.2s",
+    ];
     for (const s of steps) { await new Promise(r => setTimeout(r, 700)); setShareSteps(prev => [...prev, s]); }
     setShareDone(true);
     setTimeout(() => { setSharing(false); setShareSteps([]); setShareDone(false); }, 4000);
   }
 
+  const displayName = user?.name || "Arjun Mehta";
+  const bloodType = profile?.bloodType || "O+";
+  const allergies = profile?.allergies || ["Penicillin"];
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       {/* Header */}
       <motion.div className="flex items-start gap-5 mb-6 flex-wrap" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-ll-surface2 to-ll-surface3 border border-ll-border2 flex items-center justify-center text-3xl">👤</div>
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-ll-surface2 to-ll-surface3 border border-ll-border2 flex items-center justify-center text-3xl">
+          {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full rounded-2xl object-cover" /> : "👤"}
+        </div>
         <div className="flex-1 min-w-[200px]">
-          <h1 className="text-2xl font-extrabold tracking-tight">Arjun Mehta</h1>
-          <p className="text-xs font-mono text-ll-text3 mb-2">LL-USR-2025-00482 · Last updated 2 days ago</p>
+          <h1 className="text-2xl font-extrabold tracking-tight">{displayName}</h1>
+          <p className="text-xs font-mono text-ll-text3 mb-2">{user?.lifelineId || "LL-00482"} · Last updated 2 days ago</p>
           <div className="flex gap-2 flex-wrap">
             <span className="text-[11px] font-semibold px-3 py-1 rounded-full bg-ll-green/10 text-ll-green border border-ll-green/25">✓ Verified</span>
-            <span className="text-[11px] font-semibold px-3 py-1 rounded-full bg-ll-red/10 text-ll-red border border-ll-red/25">O− Blood Type</span>
+            <span className="text-[11px] font-semibold px-3 py-1 rounded-full bg-ll-red/10 text-ll-red border border-ll-red/25">{bloodType} Blood Type</span>
             <span className="text-[11px] font-semibold px-3 py-1 rounded-full bg-ll-blue/10 text-ll-blue border border-ll-blue/25">Family: KMFG-7291</span>
           </div>
         </div>

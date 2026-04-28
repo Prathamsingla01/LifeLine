@@ -1,0 +1,10 @@
+﻿__pycache__/
+*.pyc
+venv/
+lifeline.db
+.env
+node_modules/
+.next/
+lifeline-next/.next/
+lifeline-next/node_modules/
+*.db

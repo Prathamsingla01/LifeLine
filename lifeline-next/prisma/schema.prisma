@@ -1,0 +1,427 @@
+// LifeLine — Prisma Schema
+// PostgreSQL + PostGIS
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+// ─── AUTH ───────────────────────────────────────────────
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  phone         String?   @unique
+  passwordHash  String
+  name          String
+  avatar        String?
+  role          Role      @default(USER)
+  lifelineId    String    @unique @default(cuid()) // Public QR code ID
+  isVerified    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  sessions        Session[]
+  otps            OTP[]
+  medicalProfile  MedicalProfile?
+  emergencyContacts EmergencyContact[]
+  families        FamilyMember[]
+  emergencies     Emergency[]
+  notifications   Notification[]
+  settings        UserSettings?
+  safetyScore     SafetyScore?
+  badges          UserBadge[]
+  donations       Donation[]
+  fundraisers     Fundraiser[]       @relation("FundraiserCreator")
+  locationHistory LocationHistory[]
+
+  @@map("users")
+}
+
+enum Role {
+  USER
+  HOSPITAL_STAFF
+  ADMIN
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  userAgent    String?
+  ip           String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model OTP {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String
+  type      OTPType
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("otps")
+}
+
+enum OTPType {
+  EMAIL_VERIFY
+  PHONE_VERIFY
+  PASSWORD_RESET
+}
+
+// ─── MEDICAL PROFILE ───────────────────────────────────
+model MedicalProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  bloodType          String?
+  allergies          String[] @default([])
+  conditions         String[] @default([])
+  medications        String[] @default([])
+  emergencyNotes     String?
+  organDonor         Boolean  @default(false)
+  insuranceProvider  String?
+  insurancePolicyNo  String?
+  primaryDoctor      String?
+  primaryDoctorPhone String?
+  height             Float?   // cm
+  weight             Float?   // kg
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("medical_profiles")
+}
+
+model EmergencyContact {
+  id       String @id @default(cuid())
+  userId   String
+  name     String
+  phone    String
+  relation String
+  priority Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("emergency_contacts")
+}
+
+// ─── FAMILY TRACKING ───────────────────────────────────
+model Family {
+  id        String   @id @default(cuid())
+  name      String
+  inviteCode String  @unique
+  createdAt DateTime @default(now())
+
+  members   FamilyMember[]
+  geofences Geofence[]
+
+  @@map("families")
+}
+
+model FamilyMember {
+  id        String     @id @default(cuid())
+  userId    String
+  familyId  String
+  role      FamilyRole @default(MEMBER)
+  nickname  String?
+  joinedAt  DateTime   @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, familyId])
+  @@map("family_members")
+}
+
+enum FamilyRole {
+  ADMIN
+  MEMBER
+  CHILD
+}
+
+model Geofence {
+  id       String  @id @default(cuid())
+  familyId String
+  name     String
+  lat      Float
+  lng      Float
+  radiusM  Float   @default(500) // meters
+  type     String  @default("safe") // safe | restricted
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@map("geofences")
+}
+
+model LocationHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  lat       Float
+  lng       Float
+  accuracy  Float?
+  speed     Float?
+  heading   Float?
+  timestamp DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@map("location_history")
+}
+
+// ─── EMERGENCY MANAGEMENT ──────────────────────────────
+model Emergency {
+  id          String          @id @default(cuid())
+  reporterId  String
+  type        EmergencyType
+  severity    Severity
+  title       String
+  description String?
+  lat         Float
+  lng         Float
+  address     String?
+  status      EmergencyStatus @default(ACTIVE)
+  responders  Int             @default(0)
+  aiAnalysis  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  reporter   User        @relation(fields: [reporterId], references: [id])
+  ambulances Ambulance[]
+
+  @@index([status, createdAt])
+  @@map("emergencies")
+}
+
+enum EmergencyType {
+  ACCIDENT
+  FIRE
+  FLOOD
+  MEDICAL
+  CHILD_SAFETY
+  EARTHQUAKE
+  VIOLENCE
+  OTHER
+}
+
+enum Severity {
+  CRITICAL
+  MODERATE
+  LOW
+}
+
+enum EmergencyStatus {
+  ACTIVE
+  RESPONDING
+  RESOLVED
+  CANCELLED
+}
+
+// ─── HOSPITALS ─────────────────────────────────────────
+model Hospital {
+  id               String  @id @default(cuid())
+  name             String
+  address          String
+  phone            String?
+  lat              Float
+  lng              Float
+  totalBeds        Int     @default(0)
+  availableBeds    Int     @default(0)
+  icuBeds          Int     @default(0)
+  icuAvailable     Int     @default(0)
+  hasTraumaCenter  Boolean @default(false)
+  hasBurnUnit      Boolean @default(false)
+  emergencyReady   Boolean @default(true)
+  rating           Float   @default(4.0)
+
+  ambulances Ambulance[]
+
+  @@map("hospitals")
+}
+
+model Ambulance {
+  id           String          @id @default(cuid())
+  hospitalId   String
+  emergencyId  String?
+  vehicleNo    String          @unique
+  driverName   String?
+  driverPhone  String?
+  lat          Float?
+  lng          Float?
+  status       AmbulanceStatus @default(AVAILABLE)
+  eta          Int?            // minutes
+
+  hospital  Hospital   @relation(fields: [hospitalId], references: [id])
+  emergency Emergency? @relation(fields: [emergencyId], references: [id])
+
+  @@map("ambulances")
+}
+
+enum AmbulanceStatus {
+  AVAILABLE
+  DISPATCHED
+  EN_ROUTE
+  ON_SCENE
+  RETURNING
+}
+
+// ─── FUNDRAISING ───────────────────────────────────────
+model Fundraiser {
+  id          String           @id @default(cuid())
+  creatorId   String
+  title       String
+  description String
+  goalAmount  Float
+  raised      Float            @default(0)
+  currency    String           @default("INR")
+  category    String
+  image       String?
+  status      FundraiserStatus @default(ACTIVE)
+  verified    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  creator   User               @relation("FundraiserCreator", fields: [creatorId], references: [id])
+  donations Donation[]
+  updates   FundraiserUpdate[]
+
+  @@map("fundraisers")
+}
+
+enum FundraiserStatus {
+  ACTIVE
+  COMPLETED
+  CLOSED
+}
+
+model Donation {
+  id           String   @id @default(cuid())
+  fundraiserId String
+  donorId      String
+  amount       Float
+  anonymous    Boolean  @default(false)
+  message      String?
+  createdAt    DateTime @default(now())
+
+  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id])
+  donor      User       @relation(fields: [donorId], references: [id])
+
+  @@map("donations")
+}
+
+model FundraiserUpdate {
+  id           String   @id @default(cuid())
+  fundraiserId String
+  title        String
+  content      String
+  createdAt    DateTime @default(now())
+
+  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id])
+
+  @@map("fundraiser_updates")
+}
+
+// ─── GAMIFICATION ──────────────────────────────────────
+model SafetyScore {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  score      Int      @default(0)
+  level      Int      @default(1)
+  streak     Int      @default(0)
+  lastAction DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("safety_scores")
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badge     String   // badge slug
+  awardedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badge])
+  @@map("user_badges")
+}
+
+// ─── NOTIFICATIONS ─────────────────────────────────────
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  icon      String           @default("🔔")
+  severity  Severity         @default(LOW)
+  read      Boolean          @default(false)
+  link      String?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  EMERGENCY
+  FAMILY
+  SYSTEM
+  FUNDRAISER
+  BADGE
+  SAFETY
+}
+
+// ─── SETTINGS ──────────────────────────────────────────
+model UserSettings {
+  id                  String  @id @default(cuid())
+  userId              String  @unique
+  theme               String  @default("dark")
+  language            String  @default("en")
+  pushNotifications   Boolean @default(true)
+  emailNotifications  Boolean @default(true)
+  smsAlerts           Boolean @default(true)
+  locationSharing     Boolean @default(true)
+  crashDetection      Boolean @default(true)
+  crashSensitivity    String  @default("medium") // low | medium | high
+  autoSOS             Boolean @default(false)
+  sosCountdown        Int     @default(10) // seconds
+  silentMode          Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+// ─── AI RISK ZONES ─────────────────────────────────────
+model RiskZone {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  lat         Float
+  lng         Float
+  radiusM     Float
+  riskLevel   Severity
+  type        String   // flood | accident | crime | fire
+  validFrom   DateTime @default(now())
+  validTo     DateTime?
+  createdAt   DateTime @default(now())
+
+  @@map("risk_zones")
+}

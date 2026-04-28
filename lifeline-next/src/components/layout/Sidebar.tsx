@@ -4,10 +4,10 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect } from "react";
 import {
-  Shield, Home, Activity, AlertTriangle, Zap, Heart,
+  Shield, ShieldCheck, Home, Activity, AlertTriangle, Zap, Heart,
   Users, Radio, Brain, Settings, Bell, User, LogIn,
   ChevronLeft, ChevronRight, Sun, Moon, X, Menu,
-  Code2, MapPin, Target,
+  Code2, MapPin, Target, Building2,
 } from "lucide-react";
 import { useNotificationStore, useThemeStore, useSidebarStore } from "@/lib/store";
 
@@ -24,6 +24,7 @@ const navSections = [
     links: [
       { href: "/demo", label: "Emergency Hub", icon: AlertTriangle, emoji: "🚨" },
       { href: "/accident", label: "Accident Detection", icon: Zap, emoji: "🚗" },
+      { href: "/hospital", label: "Hospital Dashboard", icon: Building2, emoji: "🏥" },
       { href: "/scenarios", label: "Demo Scenarios", icon: Target, emoji: "🎯" },
     ],
   },
@@ -39,6 +40,7 @@ const navSections = [
   {
     title: "System",
     links: [
+      { href: "/admin", label: "Admin Panel", icon: ShieldCheck, emoji: "🛡️" },
       { href: "/architecture", label: "Architecture", icon: Code2, emoji: "⚙️" },
       { href: "/notifications", label: "Notifications", icon: Bell, emoji: "🔔" },
       { href: "/settings", label: "Settings", icon: Settings, emoji: "⚙️" },
