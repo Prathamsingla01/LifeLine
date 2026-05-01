@@ -4,7 +4,7 @@ from sqlalchemy import select
 from database import get_db
 from models import User, Family
 from schemas import RegisterRequest, RegisterResponse, LoginRequest, TokenResponse
-from auth_utils import hash_password, verify_password, create_access_token
+from auth_utils import hash_password, verify_password, create_access_token, get_current_user
 import uuid
 import random
 import string
@@ -88,12 +88,4 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.get("/me")
-async def get_me(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(lambda: None),  # placeholder
-):
-    """Get current user profile — requires auth token."""
-    from auth_utils import get_current_user
-    # This is handled by the dependency
-    pass
+# /me endpoint is in routers/user.py with full profile data

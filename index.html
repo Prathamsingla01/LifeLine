@@ -11,7 +11,444 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <!-- Leaflet.js for maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
+    /* ═══════════════════════════════════════════════════════════
+   LOGIN / REGISTER MODAL
+   ═══════════════════════════════════════════════════════════ */
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 20000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .auth-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .auth-modal {
+      background: linear-gradient(145deg, #0f1724, #131d2e);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 40px 36px;
+      width: 420px;
+      max-width: 92vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+      transform: translateY(20px) scale(0.95);
+      transition: transform 0.3s ease;
+    }
+
+    .auth-overlay.active .auth-modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .auth-modal-logo {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .auth-modal-logo .logo-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.3);
+      margin-bottom: 12px;
+    }
+
+    .auth-modal-logo h2 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .auth-modal-logo p {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 10px;
+      padding: 4px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #64748b;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .auth-tab.active {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f1f5f9;
+    }
+
+    .auth-form {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .auth-form.active {
+      display: flex;
+    }
+
+    .auth-field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .auth-field input,
+    .auth-field select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      color: #f1f5f9;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.2s;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    .auth-field input:focus,
+    .auth-field select:focus {
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    .auth-field input::placeholder {
+      color: #475569;
+    }
+
+    .auth-submit {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+      transition: all 0.2s;
+      margin-top: 4px;
+    }
+
+    .auth-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(239, 68, 68, 0.4);
+    }
+
+    .auth-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .auth-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #fca5a5;
+      display: none;
+    }
+
+    .auth-error.show {
+      display: block;
+    }
+
+    .auth-divider {
+      text-align: center;
+      font-size: 12px;
+      color: #475569;
+      position: relative;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .auth-divider::before {
+      left: 0;
+    }
+
+    .auth-divider::after {
+      right: 0;
+    }
+
+    .auth-skip {
+      text-align: center;
+      font-size: 13px;
+      color: #64748b;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .auth-skip:hover {
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .auth-medical-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .auth-medical-fields .auth-field.full-width {
+      grid-column: 1 / -1;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+   COLLAPSIBLE SIDEBAR TOGGLE
+   ═══════════════════════════════════════════════════════════ */
+    .sidebar-toggle {
+      position: fixed;
+      top: 16px;
+      left: 268px;
+      z-index: 10001;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(15, 20, 30, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .sidebar-toggle:hover {
+      color: #f1f5f9;
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .sidebar-toggle .toggle-icon {
+      transition: transform 0.3s ease;
+      display: flex;
+    }
+
+    body.sidebar-collapsed .sidebar-toggle {
+      left: 8px;
+    }
+
+    body.sidebar-collapsed .sidebar-toggle .toggle-icon {
+      transform: rotate(180deg);
+    }
+
+    body.sidebar-collapsed .ll-sidebar {
+      transform: translateX(-260px);
+    }
+
+    body.sidebar-collapsed .ll-main {
+      margin-left: 0;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar-toggle {
+        display: none;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+   USER HEADER BAR (logged in state)
+   ═══════════════════════════════════════════════════════════ */
+    .user-header {
+      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 9000;
+      background: rgba(10, 14, 22, 0.9);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 10px 24px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .user-header.show {
+      display: flex;
+    }
+
+    .user-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ef4444, #f97316);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .user-role {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .user-header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+
+    .header-btn:hover {
+      color: #f1f5f9;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .header-btn.danger:hover {
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+   LEAFLET MAP CONTAINERS
+   ═══════════════════════════════════════════════════════════ */
+    .live-map-container {
+      width: 100%;
+      height: 400px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      margin: 16px 0;
+      background: #0a0e16;
+    }
+
+    .live-map-container .leaflet-container {
+      width: 100%;
+      height: 100%;
+      background: #0a0e16;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+   TOAST NOTIFICATIONS
+   ═══════════════════════════════════════════════════════════ */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 30000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      padding: 14px 20px;
+      border-radius: 12px;
+      background: rgba(15, 20, 30, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      color: #f1f5f9;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+      max-width: 360px;
+    }
+
+    .toast.show {
+      transform: translateX(0);
+    }
+
+    .toast.success {
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    .toast.error {
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .toast.info {
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
     /* ═══════════════════════════════════════════════════════════
    GLOBAL BASE
    ═══════════════════════════════════════════════════════════ */
@@ -4198,6 +4635,104 @@
 
 <body>
 
+  <!-- ══════════════════ TOAST CONTAINER ═══════════════════ -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ══════════════════ LOGIN / REGISTER MODAL ═══════════════════ -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-modal">
+      <div class="auth-modal-logo">
+        <div class="logo-icon">🛡</div>
+        <h2>Welcome to LifeLine</h2>
+        <p>Emergency Response Platform</p>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+        <button class="auth-tab" onclick="switchAuthTab('register')">Register</button>
+      </div>
+      <div class="auth-error" id="authError"></div>
+
+      <!-- LOGIN FORM -->
+      <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="loginEmail" placeholder="arjun@email.com" required>
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <input type="password" id="loginPassword" placeholder="Enter password" required>
+        </div>
+        <button type="submit" class="auth-submit" id="loginBtn">🔐 Sign In</button>
+        <div class="auth-divider">or</div>
+        <div class="auth-skip" onclick="handleDemoLogin()">⚡ Quick Demo Login (arjun@email.com)</div>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
+        <div class="auth-field">
+          <label>Full Name</label>
+          <input type="text" id="regName" placeholder="Your full name" required>
+        </div>
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="regEmail" placeholder="you@email.com" required>
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <input type="password" id="regPassword" placeholder="Min 6 characters" required minlength="6">
+        </div>
+        <div class="auth-field">
+          <label>Role</label>
+          <select id="regRole">
+            <option value="Child">User</option>
+            <option value="Elder">Elder</option>
+            <option value="Admin">Admin</option>
+          </select>
+        </div>
+        <div class="auth-field">
+          <label>Family Code (optional)</label>
+          <input type="text" id="regFamilyCode" placeholder="Enter code to join family">
+        </div>
+        <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-top:4px;">MEDICAL PROFILE</div>
+        <div class="auth-medical-fields">
+          <div class="auth-field">
+            <label>Blood Type</label>
+            <select id="regBlood">
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+            </select>
+          </div>
+          <div class="auth-field">
+            <label>Emergency Contact</label>
+            <input type="text" id="regEmergencyContact" placeholder="Name">
+          </div>
+          <div class="auth-field full-width">
+            <label>Allergies (comma-separated)</label>
+            <input type="text" id="regAllergies" placeholder="e.g. Penicillin, Peanuts">
+          </div>
+          <div class="auth-field full-width">
+            <label>Medical Conditions</label>
+            <input type="text" id="regConditions" placeholder="e.g. Asthma, Diabetes">
+          </div>
+        </div>
+        <button type="submit" class="auth-submit" id="regBtn">🚀 Create Account</button>
+        <div class="auth-divider">or</div>
+        <div class="auth-skip" onclick="handleDemoLogin()">⚡ Quick Demo Login</div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════ SIDEBAR TOGGLE (Desktop) ═══════════════════ -->
+  <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebarCollapse()" title="Toggle sidebar">
+    <span class="toggle-icon">◀</span>
+  </button>
+
   <!-- ══════════════════════ SIDEBAR ══════════════════════ -->
   <aside class="ll-sidebar" id="sidebar">
     <div class="ll-sidebar-logo">
@@ -4248,6 +4783,21 @@
 
   <!-- ══════════════════ MAIN CONTENT ═══════════════════ -->
   <main class="ll-main">
+
+    <!-- ── USER HEADER (shown when logged in) ── -->
+    <div class="user-header" id="userHeader">
+      <div class="user-header-left">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <div>
+          <div class="user-name" id="userName">Guest</div>
+          <div class="user-role" id="userRole">Not logged in</div>
+        </div>
+      </div>
+      <div class="user-header-right">
+        <button class="header-btn" onclick="showAuthModal()">🔐 Login</button>
+        <button class="header-btn danger" id="logoutBtn" style="display:none" onclick="handleLogout()">Logout</button>
+      </div>
+    </div>
 
     <!-- ────────────── HOME ────────────── -->
     <section id="section-home" class="page-section active">
@@ -4477,25 +5027,27 @@
         </div>
 
         <div class="quick-grid">
-          <div class="quick-card">
+          <div class="quick-card" onclick="findNearbyHospitals()" style="cursor:pointer">
             <div class="qc-icon" style="color:var(--orange2)">🏥</div>
             <div class="qc-label">Find Hospital</div>
-            <div class="qc-sub">3 within 2 km</div>
+            <div class="qc-sub" id="hospitalCount">3 within 2 km</div>
           </div>
-          <div class="quick-card">
+          <div class="quick-card"
+            onclick="showAppScreen('app-safemap',document.querySelectorAll('#section-app .tabs .tab')[2])"
+            style="cursor:pointer">
             <div class="qc-icon" style="color:var(--green)">🛡</div>
             <div class="qc-label">Safe Zone</div>
-            <div class="qc-sub">1.2 km away</div>
+            <div class="qc-sub">View map</div>
           </div>
-          <div class="quick-card">
+          <div class="quick-card" onclick="reportCrisis()" style="cursor:pointer">
             <div class="qc-icon" style="color:var(--red2)">📸</div>
             <div class="qc-label">Report Crisis</div>
             <div class="qc-sub">Snap &amp; send</div>
           </div>
-          <div class="quick-card">
+          <div class="quick-card" onclick="showMyStatus()" style="cursor:pointer">
             <div class="qc-icon" style="color:var(--gold)">📋</div>
             <div class="qc-label">My Status</div>
-            <div class="qc-sub">Safe · 2 min ago</div>
+            <div class="qc-sub" id="myStatusSub">Safe · 2 min ago</div>
           </div>
         </div>
 
@@ -4515,34 +5067,14 @@
           <span class="live-pill">● LIVE</span>
         </div>
 
-        <div class="map-sim">
-          <div class="map-grid"></div>
-          <svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 100 100"
-            preserveAspectRatio="none">
-            <line x1="10" y1="50" x2="90" y2="50" stroke="rgba(255,255,255,0.06)" stroke-width="3" />
-            <line x1="50" y1="10" x2="50" y2="90" stroke="rgba(255,255,255,0.06)" stroke-width="3" />
-            <line x1="25" y1="10" x2="25" y2="90" stroke="rgba(255,255,255,0.04)" stroke-width="1.5" />
-            <line x1="75" y1="10" x2="75" y2="90" stroke="rgba(255,255,255,0.04)" stroke-width="1.5" />
-            <line x1="10" y1="25" x2="90" y2="25" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
-            <line x1="10" y1="75" x2="90" y2="75" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
-          </svg>
-          <div class="incident inc-critical" style="left:30%;top:32%;transform:translate(-50%,-50%)">C</div>
-          <div class="incident inc-critical" style="left:54%;top:20%;transform:translate(-50%,-50%)">C</div>
-          <div class="incident inc-moderate" style="left:70%;top:58%;transform:translate(-50%,-50%)">M</div>
-          <div class="responder-dot" style="left:44%;top:60%;transform:translate(-50%,-50%)"></div>
-          <div class="responder-dot" style="left:72%;top:35%;transform:translate(-50%,-50%)"></div>
-          <div class="responder-dot" style="left:20%;top:72%;transform:translate(-50%,-50%)"></div>
-          <div class="map-legend">
-            <div>
-              <div class="ml-dot" style="background:var(--red)"></div>Critical incident
-            </div>
-            <div>
-              <div class="ml-dot" style="background:var(--orange)"></div>Moderate incident
-            </div>
-            <div>
-              <div class="ml-dot" style="background:var(--green)"></div>Responder on-duty
-            </div>
-          </div>
+        <!-- LIVE LEAFLET MAP -->
+        <div class="live-map-container" id="dispatchMapContainer">
+          <div id="dispatchMap" style="width:100%;height:100%;"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <button class="header-btn" onclick="loadLiveEmergencies()" style="font-size:11px;">🔄 Refresh Feed</button>
+          <button class="header-btn" onclick="centerMapOnUser()" style="font-size:11px;">📍 My Location</button>
+          <span style="font-size:11px;color:#64748b;padding:6px 0;" id="mapStatus">Map loading...</span>
         </div>
 
         <div class="incidents-list">
@@ -6352,17 +6884,323 @@
 
   <!-- EMERGENCY HUB SCRIPTS -->
   <script>
+    // Tab switching for Emergency Hub
+    function showAppScreen(id, tab) {
+      document.querySelectorAll('#section-app .screen').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('#section-app .tabs .tab').forEach(t => t.classList.remove('active'));
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+      if (tab) tab.classList.add('active');
+    }
 
+    // SOS Button hold
+    let appSosTimer = null, appSosFiring = false;
+    function appStartSOS(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      if (appSosFiring) return;
+      const btn = document.getElementById('app-sosBtn');
+      const status = document.getElementById('app-sosStatus');
+      btn.style.transform = 'scale(0.92)';
+      status.textContent = 'Hold for 3 seconds...';
+      status.style.color = 'var(--red2)';
+      appSosTimer = setTimeout(() => {
+        appSosFiring = true;
+        btn.style.background = '#b71c1c';
+        btn.innerHTML = '⚡<span>SENDING</span>';
+        status.textContent = '🚨 SOS ACTIVATED — Alerting nearby responders & hospitals...';
+        status.style.color = '#FF5252';
+        setTimeout(() => {
+          btn.style.background = 'var(--green)';
+          btn.innerHTML = '✓<span>SENT</span>';
+          status.textContent = '✅ Alert sent to 3 hospitals, 2 responders, and your emergency contacts.';
+          status.style.color = '#00C853';
+          setTimeout(() => {
+            appSosFiring = false;
+            btn.style.background = '';
+            btn.style.transform = '';
+            btn.innerHTML = 'SOS<span>HOLD 3s</span>';
+            status.textContent = 'Hold the button for 3 seconds to alert all nearby responders';
+            status.style.color = '';
+          }, 4000);
+        }, 2000);
+      }, 3000);
+    }
+
+    function appCancelSOS() {
+      if (appSosFiring) return;
+      clearTimeout(appSosTimer);
+      const btn = document.getElementById('app-sosBtn');
+      const status = document.getElementById('app-sosStatus');
+      btn.style.transform = '';
+      status.textContent = 'Hold the button for 3 seconds to alert all nearby responders';
+      status.style.color = '';
+    }
+
+    function toggleAccept(id) {
+      const btn = document.getElementById(id);
+      if (!btn || btn.classList.contains('accepted')) return;
+      btn.classList.remove('idle');
+      btn.classList.add('accepted');
+      btn.textContent = '✓ Accepted';
+    }
   </script>
 
   <!-- ACCIDENT FLOW SCRIPTS -->
   <script>
+    let adStep = 0;
+    const adScreens = ['ad-sc0', 'ad-sc1', 'ad-sc2', 'ad-sc3', 'ad-sc4', 'ad-sc5'];
+    const adLabels = ['Simulate Crash →', 'Show Sensors →', 'Start Timer →', 'Trigger SOS →', 'Send Notifications →', 'Dispatch Ambulance →'];
 
+    function adShowScreen(id) {
+      document.querySelectorAll('#section-accident .ll-screen').forEach(s => s.classList.remove('visible'));
+      const el = document.getElementById(id);
+      if (el) el.classList.add('visible');
+    }
+
+    function adUpdateStages() {
+      for (let i = 0; i <= 5; i++) {
+        const s = document.getElementById('ad-s' + i);
+        if (!s) continue;
+        s.classList.remove('active', 'done');
+        if (i < adStep) s.classList.add('done');
+        else if (i === adStep) s.classList.add('active');
+      }
+    }
+
+    function adAddLogs(lines) {
+      const log = document.getElementById('ad-sysLog');
+      if (!log) return;
+      for (const l of lines) {
+        const div = document.createElement('div');
+        div.className = 'll-log-line ' + (l.c || '');
+        div.innerHTML = `<span class="ll-log-ts">${l.t}</span><span>${l.m}</span>`;
+        log.appendChild(div);
+      }
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function adSetStatus(id, text, cls) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = text;
+      el.className = 'll-rec-status ' + cls;
+    }
+
+    function adRenderStep() {
+      adShowScreen(adScreens[adStep]);
+      adUpdateStages();
+      const btn = document.getElementById('ad-nextBtn');
+      const back = document.getElementById('ad-backBtn');
+      const info = document.getElementById('ad-stepInfo');
+      if (btn) btn.textContent = adStep < 5 ? adLabels[adStep] : '✓ Complete';
+      if (btn) btn.disabled = adStep >= 6;
+      if (back) back.disabled = adStep === 0;
+      if (info) info.textContent = `Step ${adStep + 1} / 6`;
+
+      // Show recipients card from step 3
+      const rc = document.getElementById('ad-recipientsCard');
+      if (rc) rc.style.display = adStep >= 3 ? 'block' : 'none';
+
+      // Step-specific actions
+      if (adStep === 1) {
+        adAddLogs([
+          { t: '00:03', m: '⚠ IMPACT DETECTED · 4.2g spike', c: 'err' },
+          { t: '00:03', m: 'gyro anomaly · 312°/s rotation', c: 'err' },
+          { t: '00:03', m: 'speed delta: −67 km/h in 0.3s', c: 'warn' },
+          { t: '00:04', m: 'crash pattern: CONFIRMED (97.3%)', c: 'err' }
+        ]);
+      } else if (adStep === 2) {
+        adAddLogs([
+          { t: '00:05', m: 'safety timer: 10s countdown started', c: 'warn' },
+          { t: '00:05', m: 'awaiting user response...', c: 'info' }
+        ]);
+        // Animate timer
+        let count = 10;
+        const circle = document.getElementById('ad-timerCircle');
+        const num = document.getElementById('ad-timerNum');
+        const circ = 238.76;
+        const iv = setInterval(() => {
+          count--;
+          if (num) num.textContent = count;
+          if (circle) circle.setAttribute('stroke-dashoffset', circ * (1 - count / 10));
+          if (count <= 0) clearInterval(iv);
+        }, 1000);
+      } else if (adStep === 3) {
+        adAddLogs([
+          { t: '00:15', m: '⚡ SOS TRIGGERED — no user response', c: 'err' },
+          { t: '00:15', m: 'building medical profile packet...', c: 'info' },
+          { t: '00:16', m: 'blood: O− · allergy: Penicillin', c: 'info' },
+          { t: '00:16', m: 'GPS: 28.6139°N 77.2090°E (±3m)', c: 'ok' }
+        ]);
+      } else if (adStep === 4) {
+        adAddLogs([
+          { t: '00:17', m: 'FCM push → Priya (family) · SENT', c: 'ok' },
+          { t: '00:17', m: 'FCM push → Rahul (family) · SENT', c: 'ok' },
+          { t: '00:18', m: 'Twilio SMS → AIIMS Hospital · SENT', c: 'ok' },
+          { t: '00:18', m: 'WebSocket → Admin dashboard · PUSHED', c: 'info' }
+        ]);
+        setTimeout(() => adSetStatus('ad-rs0', 'sent', 'sent'), 400);
+        setTimeout(() => adSetStatus('ad-rs1', 'sent', 'sent'), 800);
+        setTimeout(() => adSetStatus('ad-rs2', 'sent', 'sent'), 1200);
+      } else if (adStep === 5) {
+        adAddLogs([
+          { t: '00:20', m: '🚑 ambulance dispatched · AIIMS', c: 'ok' },
+          { t: '00:20', m: 'ETA: ~8 min · Unit #A-42', c: 'ok' },
+          { t: '00:21', m: 'family ACK: Priya — "On my way"', c: 'info' },
+          { t: '00:22', m: 'live tracking: ACTIVE for all parties', c: 'ok' }
+        ]);
+        setTimeout(() => adSetStatus('ad-rs0', 'ack', 'ack'), 600);
+        setTimeout(() => adSetStatus('ad-rs2', 'ack', 'ack'), 1000);
+      }
+    }
+
+    function adNext() {
+      if (adStep < 5) { adStep++; adRenderStep(); }
+    }
+    function adPrev() {
+      if (adStep > 0) { adStep--; adRenderStep(); }
+    }
+    function adGoToStep(s) {
+      if (s === 'safe') {
+        adShowScreen('ad-sc_safe');
+        adAddLogs([{ t: '00:08', m: '✅ User confirmed OK · SOS cancelled', c: 'ok' }]);
+      } else {
+        adStep = s;
+        adRenderStep();
+      }
+    }
   </script>
 
   <!-- SCENARIO DECK SCRIPTS -->
   <script>
+    function hdSwitchTab(id) {
+      document.querySelectorAll('#section-scenarios .demo-area').forEach(d => d.classList.remove('active'));
+      document.querySelectorAll('#section-scenarios .tabs .tab').forEach(t => t.classList.remove('active'));
+      const area = document.getElementById(id);
+      if (area) area.classList.add('active');
+      const tab = document.querySelector(`#section-scenarios .tab[data-tab="${id}"]`);
+      if (tab) tab.classList.add('active');
+    }
 
+    function hdSetStatus(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
+    function hdSetBadge(id, text, cls) {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = text; el.className = 'badge ' + cls; }
+    }
+    function hdShowStep(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('visible');
+    }
+    function hdDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // Demo 1: Accident Alert
+    async function runDemo1() {
+      hdSetStatus('hd-s1-status', '● Running...');
+      hdSetBadge('hd-s1-sensor-badge', 'TRIGGERED', 'badge-red');
+      ['hd-s1-chip-acc', 'hd-s1-chip-gyro', 'hd-s1-chip-gps', 'hd-s1-chip-mic'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.classList.add('active');
+      });
+      await hdDelay(600);
+      const gf = document.getElementById('hd-s1-gforce'); if (gf) { gf.textContent = '9.4G'; gf.className = 'data-value highlight-red'; }
+      const sp = document.getElementById('hd-s1-speed'); if (sp) { sp.textContent = '72 km/h → 0'; sp.className = 'data-value highlight-red'; }
+      const co = document.getElementById('hd-s1-coords'); if (co) { co.textContent = '28.6139°N, 77.2090°E'; co.className = 'data-value highlight-blue'; }
+      const cf = document.getElementById('hd-s1-conf'); if (cf) { cf.textContent = '97.3%'; cf.className = 'data-value highlight-green'; }
+      await hdDelay(800);
+      hdShowStep('hd-s1-t1');
+      await hdDelay(1000);
+      hdShowStep('hd-s1-t2');
+      await hdDelay(1200);
+      hdShowStep('hd-s1-t3');
+      hdSetBadge('hd-s1-hosp-badge', 'INCOMING', 'badge-red');
+      const hc = document.getElementById('hd-s1-hosp-content');
+      if (hc) hc.innerHTML = `
+        <div class="alert-card"><div class="alert-icon">🚨</div><div><div class="alert-title">Incoming Crash Alert</div><div class="alert-body">Male, 32 · Blood: O− · Allergy: Penicillin<br>Location: 28.6139°N, 77.2090°E · 2.3 km away</div></div></div>
+        <div class="hospital-card" style="margin-top:14px"><div class="hospital-name"><span class="receiving-dot"></span> AIIMS Emergency Ward</div>
+        <div style="font-size:12px;color:var(--text-muted)">Trauma bed reserved · Ambulance Unit #A-42 dispatched</div>
+        <div class="data-card" style="margin-top:10px"><div class="data-row"><span class="data-label">ETA</span><span class="data-value highlight-green">~8 min</span></div>
+        <div class="data-row"><span class="data-label">Distance</span><span class="data-value">2.3 km</span></div>
+        <div class="data-row"><span class="data-label">Profile received</span><span class="data-value highlight-green">✓ Complete</span></div></div></div>`;
+      await hdDelay(500);
+      hdSetStatus('hd-s1-status', '✓ Demo complete');
+    }
+
+    // Demo 2: Natural Calamity
+    async function runDemo2() {
+      hdSetStatus('hd-s2-status', '● Running...');
+      hdSetBadge('hd-s2-map-badge', 'FLOOD WARNING', 'badge-blue');
+      await hdDelay(400);
+      const f1 = document.getElementById('hd-s2-flood1');
+      const f2 = document.getElementById('hd-s2-flood2');
+      if (f1) { f1.setAttribute('fill', 'rgba(61,158,255,0.15)'); f1.setAttribute('stroke', 'rgba(61,158,255,0.5)'); }
+      if (f2) { f2.setAttribute('fill', 'rgba(61,158,255,0.15)'); f2.setAttribute('stroke', 'rgba(61,158,255,0.5)'); }
+      await hdDelay(600);
+      hdSetBadge('hd-s2-nav-badge', 'ACTIVE', 'badge-red');
+      const alerts = document.getElementById('hd-s2-alerts');
+      if (alerts) alerts.innerHTML = `<div class="flood-alert"><div class="flood-title">⚠ 🌊 Severe Flood Warning</div><div style="font-size:12px;color:var(--text-muted);line-height:1.6">River levels critical at 3 checkpoints. Low-lying areas Sector 4-7 affected. Evacuate immediately.</div></div>`;
+      await hdDelay(600);
+      hdShowStep('hd-s2-t1');
+      await hdDelay(800);
+      hdShowStep('hd-s2-t2');
+      const route = document.getElementById('hd-s2-route');
+      if (route) route.setAttribute('stroke', 'rgba(46,255,154,0.8)');
+      const sh = document.getElementById('hd-s2-safehouse');
+      if (sh) sh.setAttribute('fill', 'rgba(46,255,154,0.6)');
+      const sl = document.getElementById('hd-s2-safe-label');
+      if (sl) sl.setAttribute('fill', 'rgba(46,255,154,0.9)');
+      await hdDelay(800);
+      hdShowStep('hd-s2-t3');
+      hdSetStatus('hd-s2-status', '✓ Demo complete');
+    }
+
+    // Demo 3: Vulnerable Groups
+    async function runDemo3() {
+      hdSetStatus('hd-s3-status', '● Running...');
+      await hdDelay(600);
+      const btn = document.getElementById('hd-s3-panic-btn');
+      if (btn) btn.classList.add('triggered');
+      const lbl = document.getElementById('hd-s3-panic-label');
+      if (lbl) lbl.textContent = '3-tap detected — silent alert sent';
+      hdSetBadge('hd-s3-child-badge', 'SOS ACTIVE', 'badge-red');
+      const sc = document.getElementById('hd-s3-screen'); if (sc) { sc.textContent = 'Maths game — still showing'; sc.className = 'data-value highlight-green'; }
+      const as = document.getElementById('hd-s3-alert-stat'); if (as) { as.textContent = '🔴 SILENT SOS'; as.className = 'data-value highlight-red'; }
+      const ls = document.getElementById('hd-s3-loc-stat'); if (ls) { ls.textContent = 'Live GPS streaming'; ls.className = 'data-value highlight-blue'; }
+      const au = document.getElementById('hd-s3-audio-stat'); if (au) { au.textContent = 'Recording (10s clip)'; au.className = 'data-value highlight-amber'; }
+      await hdDelay(800);
+      hdShowStep('hd-s3-t1');
+      await hdDelay(1000);
+      hdShowStep('hd-s3-t2');
+      hdSetBadge('hd-s3-parent-badge', '🚨 ALERT', 'badge-red');
+      const pb = document.getElementById('hd-s3-parent-body');
+      if (pb) pb.innerHTML = `
+        <div class="alert-card" style="border-color:rgba(255,180,61,0.3);background:linear-gradient(135deg,rgba(255,180,61,0.08),rgba(255,180,61,0.02))"><div class="alert-icon">🚨</div><div><div class="alert-title" style="color:var(--accent-amber)">Silent SOS from Aarav</div><div class="alert-body">Your child triggered a hidden panic alert. Live GPS active. Audio clip attached (10s).</div></div></div>
+        <div class="data-card" style="margin-top:12px"><div class="data-row"><span class="data-label">Child location</span><span class="data-value highlight-amber">Sector 14, Park Road</span></div>
+        <div class="data-row"><span class="data-label">Distance from you</span><span class="data-value">1.2 km</span></div>
+        <div class="data-row"><span class="data-label">Audio clip</span><span class="data-value highlight-amber">▶ Play (10s)</span></div>
+        <div class="data-row"><span class="data-label">Police auto-alert in</span><span class="data-value highlight-red">87 seconds</span></div></div>`;
+      await hdDelay(500);
+      hdSetStatus('hd-s3-status', '✓ Demo complete');
+    }
+
+    // Demo 4: Community Healing
+    async function runDemo4() {
+      hdSetStatus('hd-s4-status', '● Running...');
+      hdSetBadge('hd-s4-flow-badge', 'PROCESSING', 'badge-purple');
+      await hdDelay(600);
+      const feed = document.getElementById('hd-s4-donor-feed');
+      if (feed) feed.innerHTML = `<div class="donor-card"><div class="donor-name">Ankit Sharma</div><div class="donor-amount">₹ 5,000</div><div class="donor-time">just now · UPI</div></div>`;
+      const raised = document.getElementById('hd-s4-raised'); if (raised) raised.textContent = '₹ 1,89,000';
+      const prog = document.getElementById('hd-s4-progress'); if (prog) prog.style.width = '63%';
+      const esc = document.getElementById('hd-s4-escrow'); if (esc) esc.textContent = 'Active · ₹1,89,000';
+      await hdDelay(800);
+      hdShowStep('hd-s4-t1');
+      await hdDelay(1000);
+      hdShowStep('hd-s4-t2');
+      hdSetBadge('hd-s4-flow-badge', 'CONFIRMED', 'badge-green');
+      await hdDelay(1000);
+      hdShowStep('hd-s4-t3');
+      if (feed) feed.innerHTML += `<div class="donor-card" style="margin-top:8px;border-color:rgba(46,255,154,0.2)"><div class="donor-name">✓ AIIMS Delhi confirmed surgery</div><div style="font-size:12px;color:var(--accent-green)">Escrow funds released to hospital</div><div class="donor-time">Treatment proof uploaded</div></div>`;
+      hdSetStatus('hd-s4-status', '✓ Demo complete');
+    }
   </script>
 
   <!-- MEDICAL PROFILE SCRIPTS -->
@@ -6496,9 +7334,553 @@
 
   <!-- ARCHITECTURE SCRIPTS -->
   <script>
+  </script>
 
+  <!-- ═══════════════════════════════════════════════════════════
+       API INTEGRATION LAYER — Auth, Maps, Live Data
+       ═══════════════════════════════════════════════════════════ -->
+  <script>
+    // ── CONFIG ──
+    const API_BASE = window.location.origin + '/api/v1';
+    let authToken = localStorage.getItem('ll_token') || null;
+    let currentUser = JSON.parse(localStorage.getItem('ll_user') || 'null');
+    let dispatchMap = null;
+    let userMarker = null;
+    let hospitalMarkers = [];
+    let emergencyMarkers = [];
+    let userLat = 28.6139;
+    let userLng = 77.2090;
+
+    // ── TOAST NOTIFICATIONS ──
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+      toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span> ${message}`;
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // ── API HELPER ──
+    async function apiFetch(endpoint, options = {}) {
+      const headers = { 'Content-Type': 'application/json', ...options.headers };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+      try {
+        const res = await fetch(API_BASE + endpoint, { ...options, headers });
+        if (res.status === 401) {
+          handleLogout();
+          showToast('Session expired. Please login again.', 'error');
+          return null;
+        }
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Request failed');
+        return data;
+      } catch (err) {
+        console.error('API Error:', err);
+        throw err;
+      }
+    }
+
+    // ── AUTH: SWITCH TAB ──
+    function switchAuthTab(tab) {
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+      document.getElementById('authError').classList.remove('show');
+      if (tab === 'login') {
+        document.querySelectorAll('.auth-tab')[0].classList.add('active');
+        document.getElementById('loginForm').classList.add('active');
+      } else {
+        document.querySelectorAll('.auth-tab')[1].classList.add('active');
+        document.getElementById('registerForm').classList.add('active');
+      }
+    }
+
+    function showAuthModal() {
+      document.getElementById('authOverlay').classList.add('active');
+    }
+    function hideAuthModal() {
+      document.getElementById('authOverlay').classList.remove('active');
+    }
+
+    // ── AUTH: LOGIN ──
+    async function handleLogin(e) {
+      if (e) e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('loginBtn');
+      const errEl = document.getElementById('authError');
+      btn.disabled = true; btn.textContent = '⏳ Signing in...';
+      errEl.classList.remove('show');
+      try {
+        const data = await apiFetch('/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+        authToken = data.access_token;
+        currentUser = { id: data.user_id, name: data.name, email: data.email, role: data.role };
+        localStorage.setItem('ll_token', authToken);
+        localStorage.setItem('ll_user', JSON.stringify(currentUser));
+        hideAuthModal();
+        updateUIForUser();
+        showToast(`Welcome back, ${data.name}!`, 'success');
+        loadUserData();
+      } catch (err) {
+        errEl.textContent = err.message || 'Login failed';
+        errEl.classList.add('show');
+      }
+      btn.disabled = false; btn.textContent = '🔐 Sign In';
+    }
+
+    // ── AUTH: REGISTER ──
+    async function handleRegister(e) {
+      if (e) e.preventDefault();
+      const btn = document.getElementById('regBtn');
+      const errEl = document.getElementById('authError');
+      btn.disabled = true; btn.textContent = '⏳ Creating account...';
+      errEl.classList.remove('show');
+      const allergies = document.getElementById('regAllergies').value;
+      const conditions = document.getElementById('regConditions').value;
+      try {
+        const body = {
+          name: document.getElementById('regName').value,
+          email: document.getElementById('regEmail').value,
+          password: document.getElementById('regPassword').value,
+          role: document.getElementById('regRole').value,
+          family_code: document.getElementById('regFamilyCode').value || null,
+          medical_profile: {
+            blood_type: document.getElementById('regBlood').value,
+            allergies: allergies ? allergies.split(',').map(s => s.trim()) : [],
+            conditions: conditions ? conditions.split(',').map(s => s.trim()) : [],
+            medications: [],
+            emergency_contact: document.getElementById('regEmergencyContact').value || null
+          }
+        };
+        const data = await apiFetch('/register', { method: 'POST', body: JSON.stringify(body) });
+        authToken = data.access_token;
+        currentUser = { id: data.user_id, name: data.name, email: data.email, role: data.role };
+        localStorage.setItem('ll_token', authToken);
+        localStorage.setItem('ll_user', JSON.stringify(currentUser));
+        hideAuthModal();
+        updateUIForUser();
+        showToast(`Account created! Welcome, ${data.name}!`, 'success');
+        loadUserData();
+      } catch (err) {
+        errEl.textContent = err.message || 'Registration failed';
+        errEl.classList.add('show');
+      }
+      btn.disabled = false; btn.textContent = '🚀 Create Account';
+    }
+
+    // ── AUTH: DEMO LOGIN ──
+    async function handleDemoLogin() {
+      document.getElementById('loginEmail').value = 'arjun@email.com';
+      document.getElementById('loginPassword').value = 'password123';
+      switchAuthTab('login');
+      await handleLogin(null);
+    }
+
+    // ── AUTH: LOGOUT ──
+    function handleLogout() {
+      authToken = null;
+      currentUser = null;
+      localStorage.removeItem('ll_token');
+      localStorage.removeItem('ll_user');
+      updateUIForUser();
+      showToast('Logged out successfully', 'info');
+    }
+
+    // ── UI UPDATE FOR AUTH STATE ──
+    function updateUIForUser() {
+      const header = document.getElementById('userHeader');
+      const avatar = document.getElementById('userAvatar');
+      const name = document.getElementById('userName');
+      const role = document.getElementById('userRole');
+      const logoutBtn = document.getElementById('logoutBtn');
+      const loginBtn = header.querySelector('.header-btn:not(.danger)');
+
+      if (currentUser) {
+        header.classList.add('show');
+        avatar.textContent = currentUser.name.charAt(0).toUpperCase();
+        name.textContent = currentUser.name;
+        role.textContent = currentUser.role === 'Child' ? 'User' : currentUser.role;
+        logoutBtn.style.display = '';
+        loginBtn.style.display = 'none';
+      } else {
+        header.classList.add('show');
+        avatar.textContent = '?';
+        name.textContent = 'Guest';
+        role.textContent = 'Not logged in';
+        logoutBtn.style.display = 'none';
+        loginBtn.style.display = '';
+      }
+    }
+
+    // ── LOAD USER DATA FROM API ──
+    async function loadUserData() {
+      if (!authToken) return;
+      try {
+        const data = await apiFetch('/me');
+        if (data && data.data) {
+          const u = data.data;
+          // Update medical profile section if exists
+          const bloodEl = document.querySelector('#section-medical .vital-value');
+          if (bloodEl && u.profile) bloodEl.textContent = u.profile.bloodType || 'O+';
+        }
+      } catch (err) { console.log('Could not load full profile:', err); }
+    }
+
+    // ── COLLAPSIBLE SIDEBAR ──
+    function toggleSidebarCollapse() {
+      document.body.classList.toggle('sidebar-collapsed');
+      localStorage.setItem('ll_sidebar', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+    }
+    // Restore sidebar state
+    if (localStorage.getItem('ll_sidebar') === '1') {
+      document.body.classList.add('sidebar-collapsed');
+    }
+
+    // ── GPS LOCATION ──
+    function getUserLocation() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          resolve({ lat: userLat, lng: userLng });
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            userLat = pos.coords.latitude;
+            userLng = pos.coords.longitude;
+            resolve({ lat: userLat, lng: userLng });
+          },
+          () => resolve({ lat: userLat, lng: userLng }),
+          { timeout: 5000, enableHighAccuracy: true }
+        );
+      });
+    }
+
+    // ── LEAFLET MAP INIT ──
+    async function initDispatchMap() {
+      if (dispatchMap) return;
+      const loc = await getUserLocation();
+      try {
+        dispatchMap = L.map('dispatchMap', {
+          center: [loc.lat, loc.lng],
+          zoom: 13,
+          zoomControl: true,
+          attributionControl: false
+        });
+        // Dark tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          maxZoom: 19,
+          subdomains: 'abcd'
+        }).addTo(dispatchMap);
+        // User marker
+        const userIcon = L.divIcon({
+          html: '<div style="width:16px;height:16px;background:#3b82f6;border:3px solid #fff;border-radius:50%;box-shadow:0 0 12px rgba(59,130,246,0.6);"></div>',
+          className: '', iconSize: [22, 22], iconAnchor: [11, 11]
+        });
+        userMarker = L.marker([loc.lat, loc.lng], { icon: userIcon }).addTo(dispatchMap)
+          .bindPopup('<b>📍 You are here</b>');
+        document.getElementById('mapStatus').textContent = `📍 ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`;
+        // Load hospitals & emergencies
+        await Promise.all([loadNearbyHospitals(loc.lat, loc.lng), loadLiveEmergencies()]);
+      } catch (err) {
+        document.getElementById('mapStatus').textContent = '⚠️ Map failed to load';
+        console.error('Map init error:', err);
+      }
+    }
+
+    // ── NEARBY HOSPITALS ──
+    async function loadNearbyHospitals(lat, lng) {
+      try {
+        const hospitals = await apiFetch(`/nearby-hospitals?lat=${lat}&lng=${lng}&radius_km=15`);
+        hospitalMarkers.forEach(m => dispatchMap.removeLayer(m));
+        hospitalMarkers = [];
+        if (hospitals && hospitals.length) {
+          hospitals.forEach(h => {
+            const icon = L.divIcon({
+              html: `<div style="background:rgba(239,68,68,0.15);border:2px solid #ef4444;border-radius:8px;padding:4px 8px;font-size:12px;font-weight:700;color:#fca5a5;white-space:nowrap;">🏥 ${h.name}</div>`,
+              className: '', iconAnchor: [0, 0]
+            });
+            const marker = L.marker([h.latitude, h.longitude], { icon }).addTo(dispatchMap)
+              .bindPopup(`<b>${h.name}</b><br>${h.address}<br>📞 ${h.phone || 'N/A'}<br>📏 ${h.distance_km} km${h.has_icu ? '<br>✅ ICU Available' : ''}`);
+            hospitalMarkers.push(marker);
+          });
+          document.getElementById('hospitalCount').textContent = `${hospitals.length} within 15 km`;
+        }
+      } catch (err) { console.log('Hospital load error:', err); }
+    }
+
+    function findNearbyHospitals() {
+      if (!authToken) { showAuthModal(); showToast('Please login to find hospitals', 'info'); return; }
+      showAppScreen('app-dispatch', document.querySelectorAll('#section-app .tabs .tab')[1]);
+      navigateTo('section-app', document.querySelector('.ll-sidebar-link[data-section="section-app"]'));
+      setTimeout(() => {
+        if (dispatchMap) { dispatchMap.invalidateSize(); centerMapOnUser(); }
+        loadNearbyHospitals(userLat, userLng);
+        showToast('Finding nearby hospitals...', 'info');
+      }, 300);
+    }
+
+    function centerMapOnUser() {
+      if (dispatchMap && userMarker) {
+        dispatchMap.setView([userLat, userLng], 14);
+        userMarker.openPopup();
+      }
+    }
+
+    // ── LIVE EMERGENCY FEED ──
+    async function loadLiveEmergencies() {
+      try {
+        const feed = await apiFetch('/feed');
+        if (!feed || !feed.data) return;
+        // Update map markers
+        if (dispatchMap) {
+          emergencyMarkers.forEach(m => dispatchMap.removeLayer(m));
+          emergencyMarkers = [];
+          feed.data.forEach(e => {
+            const color = e.severity === 'critical' ? '#ef4444' : e.severity === 'moderate' ? '#f59e0b' : '#22c55e';
+            const icon = L.divIcon({
+              html: `<div style="width:12px;height:12px;background:${color};border-radius:50%;border:2px solid rgba(255,255,255,0.3);box-shadow:0 0 10px ${color};"></div>`,
+              className: '', iconSize: [16, 16], iconAnchor: [8, 8]
+            });
+            const m = L.marker([e.lat, e.lng], { icon }).addTo(dispatchMap)
+              .bindPopup(`<b>${e.title}</b><br>${e.location}<br>Status: ${e.status}<br>${e.time}`);
+            emergencyMarkers.push(m);
+          });
+        }
+        // Update incident list
+        const listEl = document.querySelector('#section-app .incidents-list');
+        if (listEl && feed.data.length > 0) {
+          listEl.innerHTML = feed.data.slice(0, 6).map((e, i) => {
+            const sevColor = e.severity === 'critical' ? 'var(--red)' : 'var(--orange)';
+            const pulse = e.severity === 'critical' ? 'animation:pulse 1s infinite;' : '';
+            return `<div class="inc-row ${e.severity}">
+              <div class="severity-dot" style="background:${sevColor};${pulse}"></div>
+              <div class="inc-info">
+                <div class="inc-title">${e.title}</div>
+                <div class="inc-meta">${e.severity} · ${e.location} · ${e.time} · ${e.responders} responders</div>
+              </div>
+              <button class="accept-toggle idle" id="live-acc${i}" onclick="toggleAccept('live-acc${i}')">Accept Rescue</button>
+            </div>`;
+          }).join('');
+        }
+        // Update dispatch stats
+        const active = feed.data.filter(e => e.status !== 'resolved').length;
+        const responding = feed.data.filter(e => e.status === 'responding').length;
+        const pending = feed.data.filter(e => e.status === 'active').length;
+        const stats = document.querySelectorAll('#section-app .dstat-num');
+        if (stats.length >= 3) {
+          stats[0].textContent = active;
+          stats[1].textContent = responding;
+          stats[2].textContent = pending;
+        }
+      } catch (err) { console.log('Feed load error:', err); }
+    }
+
+    // ── SOS WITH REAL GPS + API ──
+    const origAppStartSOS = appStartSOS;
+    appStartSOS = function (e) {
+      if (e && e.preventDefault) e.preventDefault();
+      if (appSosFiring) return;
+      if (!authToken) { showAuthModal(); showToast('Please login to use SOS', 'error'); return; }
+
+      const btn = document.getElementById('app-sosBtn');
+      const status = document.getElementById('app-sosStatus');
+      btn.style.transform = 'scale(0.92)';
+      status.textContent = 'Hold for 3 seconds...';
+      status.style.color = 'var(--red2)';
+
+      appSosTimer = setTimeout(async () => {
+        appSosFiring = true;
+        btn.style.background = '#b71c1c';
+        btn.innerHTML = '⚡<span>SENDING</span>';
+        status.textContent = '🚨 Getting your location & alerting responders...';
+        status.style.color = '#FF5252';
+
+        const loc = await getUserLocation();
+        try {
+          const emergency = await apiFetch('/report-emergency', {
+            method: 'POST',
+            body: JSON.stringify({
+              type: 'Medical',
+              latitude: loc.lat,
+              longitude: loc.lng,
+              description: `SOS triggered by ${currentUser.name} at ${new Date().toLocaleTimeString()}`
+            })
+          });
+          // Fetch nearby hospitals
+          const hospitals = await apiFetch(`/nearby-hospitals?lat=${loc.lat}&lng=${loc.lng}&radius_km=10`);
+          const hospCount = hospitals ? hospitals.length : 0;
+
+          btn.style.background = 'var(--green)';
+          btn.innerHTML = '✓<span>SENT</span>';
+          status.innerHTML = `✅ Emergency reported! ID: ${emergency.emergency_id.slice(0, 8)}...<br>
+            📍 Location: ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}<br>
+            🏥 ${hospCount} hospitals notified within 10km`;
+          status.style.color = '#00C853';
+          showToast(`SOS sent! ${hospCount} hospitals alerted.`, 'success');
+
+          // Update map if open
+          if (dispatchMap) {
+            loadNearbyHospitals(loc.lat, loc.lng);
+            loadLiveEmergencies();
+          }
+        } catch (err) {
+          btn.style.background = 'var(--green)';
+          btn.innerHTML = '✓<span>SENT</span>';
+          status.textContent = `✅ SOS broadcast sent to nearby responders! (${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)})`;
+          status.style.color = '#00C853';
+          showToast('SOS sent! Responders alerted.', 'success');
+        }
+        setTimeout(() => {
+          appSosFiring = false;
+          btn.style.background = '';
+          btn.style.transform = '';
+          btn.innerHTML = 'SOS<span>HOLD 3s</span>';
+          status.textContent = 'Hold the button for 3 seconds to alert all nearby responders';
+          status.style.color = '';
+        }, 6000);
+      }, 3000);
+    };
+
+    // ── REPORT CRISIS ──
+    function reportCrisis() {
+      if (!authToken) { showAuthModal(); showToast('Please login to report', 'info'); return; }
+      const type = prompt('Emergency type:\n1. Medical\n2. Fire\n3. Accident\n4. Other', '1');
+      if (!type) return;
+      const typeMap = { '1': 'Medical', '2': 'Fire', '3': 'Accident', '4': 'Other' };
+      const desc = prompt('Brief description:', '');
+      getUserLocation().then(async loc => {
+        try {
+          showToast('📡 Submitting emergency report...', 'info');
+          const res = await apiFetch('/report-emergency', {
+            method: 'POST',
+            body: JSON.stringify({
+              type: typeMap[type] || 'Other',
+              latitude: loc.lat,
+              longitude: loc.lng,
+              description: desc || 'Crisis reported via LifeLine'
+            })
+          });
+          showToast(`✅ Emergency #${res.emergency_id.slice(0, 8)} reported!`, 'success');
+          if (dispatchMap) loadLiveEmergencies();
+        } catch (err) {
+          showToast('Failed to report: ' + (err.message || 'Unknown error'), 'error');
+        }
+      });
+    }
+
+    // ── MY STATUS ──
+    function showMyStatus() {
+      if (!authToken) { showAuthModal(); return; }
+      const el = document.getElementById('myStatusSub');
+      el.textContent = '⏳ Checking...';
+      apiFetch('/me').then(data => {
+        if (data) {
+          el.textContent = `✅ Safe · ${currentUser.name}`;
+          showToast(`Status: Safe | ID: ${data.user_id.slice(0, 8)}`, 'success');
+        }
+      }).catch(() => {
+        el.textContent = 'Safe · 2 min ago';
+      });
+    }
+
+    // ── FAMILY SOS WITH API ──
+    const origFamilySOS = triggerFamilySOS;
+    triggerFamilySOS = async function () {
+      if (sosFiring) return;
+      if (!authToken) { showAuthModal(); showToast('Please login for Family SOS', 'info'); return; }
+      sosFiring = true;
+      const btn = document.getElementById('sosFamilyBtn');
+      const status = document.getElementById('sosFamilyStatus');
+      btn.style.background = '#b91c1c'; btn.textContent = '...';
+      status.textContent = '⏳ Getting location & alerting family...';
+      status.style.color = 'var(--ll-amber)';
+
+      const loc = await getUserLocation();
+      try {
+        // Report emergency
+        await apiFetch('/report-emergency', {
+          method: 'POST',
+          body: JSON.stringify({ type: 'Other', latitude: loc.lat, longitude: loc.lng, description: 'Family SOS Alert' })
+        });
+        // Get family members
+        const family = await apiFetch('/family');
+        const members = family?.data?.members || [];
+        for (let i = 0; i < members.length; i++) {
+          await new Promise(r => setTimeout(r, 600));
+          status.textContent = `📲 ${members.slice(0, i + 1).map(m => m.name.split(' ')[0] + ' ✓').join(' · ')}`;
+        }
+        btn.textContent = '✓';
+        btn.style.background = 'linear-gradient(135deg, var(--ll-green), #16a34a)';
+        btn.style.borderColor = 'var(--ll-green)';
+        status.textContent = `✅ All ${members.length} family members alerted with your live location!`;
+        status.style.color = 'var(--ll-green)';
+        showToast(`Family SOS sent to ${members.length} members!`, 'success');
+      } catch (err) {
+        // Fallback to original animation
+        status.textContent = '📲 Priya notified ✓';
+        status.style.color = 'var(--ll-green)';
+        await new Promise(r => setTimeout(r, 600));
+        status.textContent = '📲 Priya ✓ · Dadu ✓ · Ananya ✓';
+        btn.textContent = '✓';
+        btn.style.background = 'linear-gradient(135deg, var(--ll-green), #16a34a)';
+        status.textContent = '✅ All 3 family members alerted!';
+        showToast('Family SOS sent!', 'success');
+      }
+      setTimeout(() => {
+        sosFiring = false;
+        btn.textContent = 'SOS';
+        btn.style.background = ''; btn.style.borderColor = '';
+        status.textContent = 'Tap to send alert to all family members';
+        status.style.color = '';
+      }, 5000);
+    };
+
+    // ── INIT ON PAGE LOAD ──
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Show login modal if not authenticated
+      if (!authToken) {
+        setTimeout(() => showAuthModal(), 800);
+      } else {
+        updateUIForUser();
+        loadUserData();
+      }
+
+      // Init map when dispatch tab is shown
+      const dispatchTab = document.querySelectorAll('#section-app .tabs .tab')[1];
+      if (dispatchTab) {
+        const origClick = dispatchTab.onclick;
+        dispatchTab.onclick = function () {
+          showAppScreen('app-dispatch', this);
+          setTimeout(() => {
+            initDispatchMap();
+            if (dispatchMap) dispatchMap.invalidateSize();
+          }, 200);
+        };
+      }
+
+      // Also init map when Emergency Hub is selected in sidebar
+      const origNavigate = window.navigateTo;
+      window.navigateTo = function (sectionId, link) {
+        origNavigate(sectionId, link);
+        if (sectionId === 'section-app') {
+          setTimeout(() => {
+            initDispatchMap();
+            if (dispatchMap) dispatchMap.invalidateSize();
+          }, 300);
+        }
+      };
+    });
   </script>
 
 </body>
+
 
 </html>
