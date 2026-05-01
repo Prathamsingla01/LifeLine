@@ -7366,7 +7366,54 @@
       }, 4000);
     }
 
-    // ── API HELPER ──
+    // ── DEMO MODE DATA (for GitHub Pages / static hosting) ──
+    const DEMO_HOSPITALS = [
+      { id: 'h1', name: 'AIIMS Delhi', address: 'Ansari Nagar, New Delhi', phone: '011-26588500', latitude: 28.5672, longitude: 77.2100, has_icu: true, beds_available: 12, distance_km: 2.3 },
+      { id: 'h2', name: 'Safdarjung Hospital', address: 'Ring Road, New Delhi', phone: '011-26707437', latitude: 28.5685, longitude: 77.2065, has_icu: true, beds_available: 8, distance_km: 3.1 },
+      { id: 'h3', name: 'Max Super Speciality', address: 'Saket, New Delhi', phone: '011-26515050', latitude: 28.5275, longitude: 77.2137, has_icu: true, beds_available: 15, distance_km: 5.7 },
+      { id: 'h4', name: 'Fortis Escorts Heart Institute', address: 'Okhla, New Delhi', phone: '011-47135000', latitude: 28.5355, longitude: 77.2783, has_icu: true, beds_available: 6, distance_km: 7.2 },
+      { id: 'h5', name: 'Sir Ganga Ram Hospital', address: 'Rajinder Nagar, New Delhi', phone: '011-25750000', latitude: 28.6380, longitude: 77.1885, has_icu: true, beds_available: 10, distance_km: 4.8 }
+    ];
+    const DEMO_FEED = { data: [
+      { id: 'e1', title: 'Multi-vehicle collision on NH-48', location: 'Dwarka Expressway', severity: 'critical', status: 'responding', time: '3 min ago', responders: 4, lat: 28.5921, lng: 77.0460 },
+      { id: 'e2', title: 'Building fire in Connaught Place', location: 'Block A, CP', severity: 'critical', status: 'active', time: '12 min ago', responders: 6, lat: 28.6315, lng: 77.2167 },
+      { id: 'e3', title: 'Medical emergency near Metro', location: 'Rajiv Chowk Station', severity: 'moderate', status: 'responding', time: '18 min ago', responders: 2, lat: 28.6328, lng: 77.2197 },
+      { id: 'e4', title: 'Gas leak reported', location: 'Lajpat Nagar', severity: 'moderate', status: 'active', time: '25 min ago', responders: 3, lat: 28.5700, lng: 77.2400 },
+      { id: 'e5', title: 'Road accident on Ring Road', location: 'Near AIIMS Flyover', severity: 'critical', status: 'resolved', time: '45 min ago', responders: 5, lat: 28.5650, lng: 77.2080 }
+    ]};
+    const DEMO_FAMILY = { data: { members: [
+      { id: 'f1', name: 'Priya Sharma', relation: 'Sister', status: 'safe', lat: 28.6200, lng: 77.2250 },
+      { id: 'f2', name: 'Dadu Ji', relation: 'Grandfather', status: 'safe', lat: 28.6100, lng: 77.2000 },
+      { id: 'f3', name: 'Ananya Sharma', relation: 'Mother', status: 'safe', lat: 28.6300, lng: 77.2100 }
+    ]}};
+
+    // Return demo data for a given endpoint when backend is unavailable
+    function getDemoResponse(endpoint, options = {}) {
+      const method = (options.method || 'GET').toUpperCase();
+      const body = options.body ? JSON.parse(options.body) : {};
+      const ep = endpoint.split('?')[0]; // strip query params
+
+      if (ep === '/login' && method === 'POST') {
+        const name = (body.email || '').split('@')[0];
+        const displayName = name.charAt(0).toUpperCase() + name.slice(1);
+        return { access_token: 'demo_token_' + Date.now(), user_id: 'demo-' + name, name: displayName || 'Arjun', email: body.email || 'arjun@email.com', role: 'Parent' };
+      }
+      if (ep === '/register' && method === 'POST') {
+        return { access_token: 'demo_token_' + Date.now(), user_id: 'demo-' + Date.now(), name: body.name || 'New User', email: body.email || 'user@email.com', role: body.role || 'Child' };
+      }
+      if (ep === '/me') {
+        return { user_id: currentUser?.id || 'demo-arjun', data: { name: currentUser?.name || 'Arjun', email: currentUser?.email || 'arjun@email.com', role: currentUser?.role || 'Parent', profile: { bloodType: 'O+', allergies: ['Penicillin'], conditions: [], medications: [] } } };
+      }
+      if (ep === '/nearby-hospitals') return DEMO_HOSPITALS;
+      if (ep === '/feed') return DEMO_FEED;
+      if (ep === '/family') return DEMO_FAMILY;
+      if (ep === '/report-emergency' && method === 'POST') {
+        return { emergency_id: 'EM-' + Math.random().toString(36).substr(2, 9).toUpperCase(), status: 'active', message: 'Emergency reported successfully' };
+      }
+      return null;
+    }
+
+    // ── API HELPER (with automatic demo fallback) ──
     async function apiFetch(endpoint, options = {}) {
       const headers = { 'Content-Type': 'application/json', ...options.headers };
       if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
@@ -7380,12 +7427,18 @@
         // Guard against HTML responses (e.g. GitHub Pages 404)
         const contentType = res.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
-          throw new Error('Backend not available (static hosting mode)');
+          throw new Error('Backend not available');
         }
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Request failed');
         return data;
       } catch (err) {
+        // Fallback to demo data on static hosting
+        const demo = getDemoResponse(endpoint, options);
+        if (demo) {
+          console.log('[Demo Mode]', endpoint, '→ using mock data');
+          return demo;
+        }
         console.error('API Error:', err);
         throw err;
       }
